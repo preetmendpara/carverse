@@ -145,6 +145,40 @@ export function pressable(root = document) {
   });
 }
 
+/** Magnetic pull: primary CTAs drift toward the cursor, then snap back.
+ *  Only the offset is written here — the easing lives in CSS, so the buttons
+ *  still behave correctly if this never runs. Skipped on touch and on any
+ *  reduced-motion level, where a cursor-follow effect is pointless or unwanted.
+ */
+export function magnetic(root = document) {
+  if (motionLevel() !== "full") return;
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+  const STRENGTH = 0.32; // fraction of the cursor's offset from centre
+  const MAX = 10; // px, keeps the button inside its own hit area
+
+  root.querySelectorAll(".btn-primary:not([data-magnetic])").forEach((el) => {
+    el.setAttribute("data-magnetic", "");
+
+    el.addEventListener("pointermove", (e) => {
+      const r = el.getBoundingClientRect();
+      const dx = (e.clientX - (r.left + r.width / 2)) * STRENGTH;
+      const dy = (e.clientY - (r.top + r.height / 2)) * STRENGTH;
+      el.classList.add("is-pulling");
+      el.style.setProperty("--mx", `${Math.max(-MAX, Math.min(MAX, dx)).toFixed(1)}px`);
+      el.style.setProperty("--my", `${Math.max(-MAX, Math.min(MAX, dy)).toFixed(1)}px`);
+    });
+
+    const release = () => {
+      el.classList.remove("is-pulling");
+      el.style.setProperty("--mx", "0px");
+      el.style.setProperty("--my", "0px");
+    };
+    el.addEventListener("pointerleave", release);
+    el.addEventListener("pointercancel", release);
+  });
+}
+
 export function initMotionFx() {
   headerScroll();
   heroIntro();
@@ -152,6 +186,7 @@ export function initMotionFx() {
   countUp();
   parallax();
   pressable();
+  magnetic();
   scrollWords();
 }
 
@@ -160,6 +195,7 @@ export function refreshMotionFx(container) {
   revealAll(container || document);
   countUp(container || document);
   pressable(container || document);
+  magnetic(container || document);
   scrollWords(container || document);
 }
 

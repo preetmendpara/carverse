@@ -375,3 +375,74 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
   .scroll-stage { min-height: calc(100dvh * (1 + var(--sw-travel))); }
   .scroll-stage .scroll-sticky { height: 100dvh; }
 }
+
+/* =====================================================================
+   Hover magic — buttons, cards and links.
+   Pure black & white: every effect uses light, contrast or motion only,
+   never colour. All of it degrades to a plain static look under
+   prefers-reduced-motion.
+   ===================================================================== */
+
+/* A diagonal specular streak that sweeps across on hover, on top of the
+   existing fill. Pointer-events off so it never eats the click. */
+.btn::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%;
+  pointer-events: none; opacity: 0;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: skewX(-18deg);
+  transition: left .62s cubic-bezier(.22,1,.36,1), opacity .2s ease;
+}
+.btn:hover::before { left: 125%; opacity: 1; }
+.btn-primary:hover::before { background: linear-gradient(100deg, transparent, rgba(0,0,0,.4), transparent); }
+
+/* Magnetic pull: JS writes --mx/--my, CSS owns the easing so the spring
+   still feels right if the script never runs. */
+.btn[data-magnetic] {
+  transform: translate(var(--mx, 0px), var(--my, 0px));
+  transition: transform .28s cubic-bezier(.22,1,.36,1), color .32s ease,
+              border-color .3s ease, background-position .42s cubic-bezier(.22,1,.36,1);
+}
+.btn[data-magnetic].is-pulling { transition: transform .08s linear; }
+.btn[data-magnetic].is-pressed { transform: translate(var(--mx, 0px), var(--my, 0px)) scale(.96); }
+
+/* Trailing arrow that slides out and back. */
+.btn-arrow::after {
+  content: "→"; display: inline-block; margin-left: .6em;
+  transition: transform .34s cubic-bezier(.22,1,.36,1);
+}
+.btn-arrow:hover::after { transform: translateX(5px); }
+
+/* Keyboard focus must stay obvious — never trade this for aesthetics. */
+.btn:focus-visible, .nav-links a:focus-visible, .car-card:focus-visible {
+  outline: 2px solid var(--text); outline-offset: 3px;
+}
+
+/* ------------------------------- cards --------------------------------- */
+.car-card {
+  transition: transform .45s cubic-bezier(.22,1,.36,1), border-color .35s ease, box-shadow .45s ease;
+}
+.car-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255,255,255,.42);
+  box-shadow: 0 18px 40px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.06);
+}
+.car-card .car-thumb img {
+  transition: transform .75s cubic-bezier(.22,1,.36,1), filter .5s ease;
+}
+.car-card:hover .car-thumb img { transform: scale(1.07); filter: contrast(1.08) brightness(1.04); }
+
+/* Thin light bar that wipes across the top edge of a hovered card. */
+.car-card .car-thumb { position: relative; }
+.car-card .car-thumb::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .6s cubic-bezier(.22,1,.36,1);
+}
+.car-card:hover .car-thumb::after { transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn::before, .car-card .car-thumb::after { display: none; }
+  .btn[data-magnetic] { transform: none; }
+  .car-card, .car-card:hover, .car-card .car-thumb img { transition: none; transform: none; }
+}
