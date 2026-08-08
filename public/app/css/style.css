@@ -814,24 +814,25 @@ input, select, textarea { border-radius: 0; }
     /* Base sits at .72 alpha — dim enough that the full-strength band reads
        as a highlight, still 9:1 against the page in both themes. */
     background-image: linear-gradient(100deg,
-      rgba(var(--fx-rgb), .72) 0%, rgba(var(--fx-rgb), .72) 40%,
+      rgba(var(--fx-rgb), .70) 0%, rgba(var(--fx-rgb), .70) 35%,
+      rgba(var(--fx-rgb), .88) 45%,
       rgb(var(--fx-rgb)) 50%,
-      rgba(var(--fx-rgb), .72) 60%, rgba(var(--fx-rgb), .72) 100%);
-    background-size: 260% 100%;
+      rgba(var(--fx-rgb), .88) 55%,
+      rgba(var(--fx-rgb), .70) 65%, rgba(var(--fx-rgb), .70) 100%);
+    background-size: 300% 100%;
     background-repeat: no-repeat;
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
-    animation: brand-shine 5.5s linear infinite;
+    animation: brand-shine 3.4s linear infinite;
   }
 }
 
-/* The sweep occupies the first quarter of the cycle and the rest is a hold,
-   so the highlight reads as a repeating glint rather than a band travelling
-   across the letters without pause. */
+/* One continuous pass, no hold — a rest between sweeps read as the animation
+   freezing rather than resting. The highlight is off the glyphs at both ends,
+   so the wrap back to the start is invisible and the loop looks seamless. */
 @keyframes brand-shine {
-  0%   { background-position: 130% 0; }
-  26%  { background-position: -30% 0; }
-  100% { background-position: -30% 0; }
+  from { background-position: 160% 0; }
+  to   { background-position: -60% 0; }
 }
 
 /* Transparent glyphs depend entirely on the gradient painting, so anything
