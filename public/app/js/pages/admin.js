@@ -10,6 +10,7 @@ import {
 import { esc, money, toast } from "../../components/layout.js";
 import { carTitle } from "../../components/car-card.js";
 import * as store from "../core/store.js";
+import { matchesBrand } from "../core/catalog.js";
 import { initAnimations } from "../features/animate.js";
 import { isDemoAdmin, demoSignOut } from "../features/demo-admin.js";
 
@@ -30,30 +31,42 @@ const closeModal = () => {
 modalBack.addEventListener("click", (e) => {
   if (e.target === modalBack) closeModal();
 });
-// Row / image removal inside any modal form (bound once).
-modal.addEventListener("click", (e) => {
+// Row / image removal for any form (modal *or* the settings page). Bound once.
+document.addEventListener("click", (e) => {
   if (e.target.matches("[data-rmrow]")) e.target.closest(".kv-row, .list-row")?.remove();
   if (e.target.matches("[data-rmimg]")) e.target.closest(".item")?.remove();
 });
 
-/* ----------------------------- auth guard ------------------------------ */
-if (isDemoAdmin()) {
-  window.addEventListener("hashchange", route);
-  route();
-} else
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.replace("../pages/admin-login.html");
-    return;
-  }
-  if (!(await store.isAdmin(user.uid))) {
-    await signOut(auth);
-    location.replace("../pages/admin-login.html");
-    return;
-  }
-  window.addEventListener("hashchange", route);
-  route();
-});
+/* --------------------- single-image field (logo/banner) ---------------- */
+// Markup + preview wiring shared by brand logo and the settings logo/banner.
+const imageField = (id, label, url) => `
+  <div class="field"><label>${label}</label>
+    <input type="file" id="${id}" accept="image/*">
+    <div class="thumb-row" data-single="${id}">
+      ${url ? `<div class="item" data-url="${esc(url)}"><img src="${esc(url)}" alt=""><button type="button" data-rmimg>×</button></div>` : ""}
+    </div>
+  </div>`;
+
+function bindImageField(id) {
+  const input = document.getElementById(id);
+  const row = document.querySelector(`[data-single="${id}"]`);
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (!file) return;
+    row.innerHTML = `<div class="item"><img alt=""><button type="button" data-rmimg>×</button></div>`;
+    const item = row.firstElementChild;
+    item.querySelector("img").src = URL.createObjectURL(file);
+    item._file = file;
+    input.value = "";
+  });
+}
+
+// Returns the File to upload, the kept URL, or null when the image was removed.
+function readImageField(id) {
+  const item = document.querySelector(`[data-single="${id}"] .item`);
+  if (!item) return { file: null, url: null };
+  return { file: item._file || null, url: item.dataset.url || null };
+}
 
 document.getElementById("logout").addEventListener("click", async (e) => {
   e.preventDefault();
@@ -74,6 +87,30 @@ function route() {
 
 const head = (title, actions = "") =>
   `<div class="admin-head"><h1 style="font-size:1.5rem">${title}</h1><div class="row-actions">${actions}</div></div>`;
+
+/* ----------------------------- auth guard ------------------------------ */
+// Must run after ROUTES is initialised — demo mode routes synchronously.
+const startRouting = () => {
+  window.addEventListener("hashchange", route);
+  route();
+};
+
+if (isDemoAdmin()) {
+  startRouting();
+} else {
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      location.replace("../pages/admin-login.html");
+      return;
+    }
+    if (!(await store.isAdmin(user.uid))) {
+      await signOut(auth);
+      location.replace("../pages/admin-login.html");
+      return;
+    }
+    startRouting();
+  });
+}
 
 /* ------------------------------ dashboard ------------------------------ */
 async function dashboard() {
@@ -163,15 +200,14 @@ function brandForm(brand = null) {
         <div class="field"><label>Country</label><input id="country" value="${esc(brand?.country || "")}"></div>
       </div>
       <div class="field"><label>Description</label><textarea id="description">${esc(brand?.description || "")}</textarea></div>
-      <div class="field"><label>Logo (stored in brand-logos)</label><input id="logo" type="file" accept="image/*">
-        ${brand?.logoUrl ? `<div class="thumb-row"><div class="item"><img src="${esc(brand.logoUrl)}" alt=""></div></div>` : ""}
-      </div>
+      ${imageField("logo", `Logo <span class="muted small">(brand-logos)</span>`, brand?.logoUrl)}
       <div class="field checkbox"><input type="checkbox" id="featured" ${brand?.featured ? "checked" : ""}><label for="featured" style="margin:0">Featured brand</label></div>
       <div class="row-actions"><button class="btn btn-primary" type="submit" id="save">Save</button>
       <button class="btn btn-ghost" type="button" id="cancel">Cancel</button></div>
       <p class="small" id="st"></p>
     </form>`);
   document.getElementById("cancel").addEventListener("click", closeModal);
+  bindImageField("logo");
   document.getElementById("bf").addEventListener("submit", async (e) => {
     e.preventDefault();
     const st = document.getElementById("st");
@@ -184,14 +220,14 @@ function brandForm(brand = null) {
         description: document.getElementById("description").value.trim(),
         featured: document.getElementById("featured").checked,
       };
-      const file = document.getElementById("logo").files[0];
-      if (file) {
+      const logo = readImageField("logo");
+      if (logo.file) {
         st.textContent = "Uploading logo…";
-        const up = await store.uploadFile("brand-logos", file);
+        const up = await store.uploadFile("brand-logos", logo.file);
         data.logoUrl = up.url;
         data.logoPath = up.path;
-      } else if (brand?.logoUrl) {
-        data.logoUrl = brand.logoUrl;
+      } else {
+        data.logoUrl = logo.url; // null when the admin removed it
       }
       await store.saveBrand(data, brand?.id);
       closeModal();
@@ -291,7 +327,12 @@ async function carForm(car = null, brandList = null) {
         <select id="brandId" required>
           <option value="">Select brand</option>
           ${brandsAvailable
-            .map((b) => `<option value="${esc(b.id)}" ${car?.brandId === b.id ? "selected" : ""}>${esc(b.name || b.id)}</option>`)
+            .map(
+              // Seeded cars store a slug ("koenigsegg") rather than the brand
+              // doc id, so fall back to the same name match the catalog uses.
+              (b) =>
+                `<option value="${esc(b.id)}" ${car && matchesBrand(car, b) ? "selected" : ""}>${esc(b.name || b.id)}</option>`
+            )
             .join("")}
         </select>
         ${brandsAvailable.length ? "" : `<p class="small">Add a brand first.</p>`}
@@ -332,6 +373,7 @@ async function carForm(car = null, brandList = null) {
               )
               .join("")}
           </div>
+          <div class="thumb-row" data-pending="${key}"></div>
         </div>`
       ).join("")}
 
@@ -363,6 +405,44 @@ async function carForm(car = null, brandList = null) {
       <button class="btn btn-ghost" type="button" id="cancel">Cancel</button></div>
       <p class="small" id="st"></p>
     </form>`);
+
+  // Live thumbnails for freshly picked files. The File rides on the element
+  // itself, so the shared [data-rmimg] handler also un-queues the upload.
+  for (const [key, , , multi] of IMAGE_GROUPS) {
+    const input = document.querySelector(`[data-img="${key}"]`);
+    const pending = document.querySelector(`[data-pending="${key}"]`);
+    input.addEventListener("change", () => {
+      if (!multi) pending.innerHTML = "";
+      for (const file of input.files) {
+        const item = document.createElement("div");
+        item.className = "item";
+        item.innerHTML = `<img alt=""><button type="button" data-rmimg>×</button>`;
+        item.querySelector("img").src = URL.createObjectURL(file);
+        item._file = file;
+        pending.appendChild(item);
+      }
+      input.value = ""; // so re-picking the same file still fires change
+    });
+
+    // Pasted URLs become real thumbnails once the field loses focus.
+    const urlBox = document.querySelector(`[data-imgurl="${key}"]`);
+    const existing = document.querySelector(`[data-existing="${key}"]`);
+    urlBox.addEventListener("change", () => {
+      const urls = urlBox.value
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter((s) => /^https?:\/\//i.test(s));
+      if (!urls.length) return;
+      if (!multi) existing.innerHTML = "";
+      for (const url of multi ? urls : urls.slice(-1)) {
+        existing.insertAdjacentHTML(
+          "beforeend",
+          `<div class="item" data-url="${esc(url)}"><img src="${esc(url)}" alt=""><button type="button" data-rmimg>×</button></div>`
+        );
+      }
+      urlBox.value = "";
+    });
+  }
 
   let removeModel = false;
   document.getElementById("rm-model")?.addEventListener("click", (e) => {
@@ -410,11 +490,11 @@ async function carForm(car = null, brandList = null) {
         const kept = [...document.querySelectorAll(`[data-existing="${key}"] .item`)].map(
           (i) => i.dataset.url
         );
-        const input = document.querySelector(`[data-img="${key}"]`);
+        const queued = [...document.querySelectorAll(`[data-pending="${key}"] .item`)];
         const uploaded = [];
-        for (const file of input.files) {
+        for (const item of queued) {
           st.textContent = `Uploading ${label}…`;
-          uploaded.push((await store.uploadFile(folder, file)).url);
+          uploaded.push((await store.uploadFile(folder, item._file)).url);
         }
         const pasted = (document.querySelector(`[data-imgurl="${key}"]`)?.value || "")
           .split(/[\n,]+/)
@@ -536,6 +616,7 @@ async function chats() {
   view.appendChild(box);
   box.querySelectorAll("[data-del]").forEach((b) =>
     b.addEventListener("click", async () => {
+      if (!confirm("Delete this conversation?")) return;
       await store.deleteChat(b.dataset.del);
       toast("Deleted");
       chats();
@@ -563,14 +644,14 @@ async function settings() {
         <div class="field"><label>LinkedIn</label><input id="s-linkedin" value="${esc(soc.linkedin || "")}"></div>
       </div>
       <div class="field"><label>Footer text</label><textarea id="footerText">${esc(s.footerText || "")}</textarea></div>
-      <div class="field"><label>Logo</label><input type="file" id="logo" accept="image/*">
-        ${s.logoUrl ? `<div class="thumb-row"><div class="item"><img src="${esc(s.logoUrl)}" alt=""></div></div>` : ""}</div>
-      <div class="field"><label>Homepage banner</label><input type="file" id="banner" accept="image/*">
-        ${s.bannerUrl ? `<div class="thumb-row"><div class="item"><img src="${esc(s.bannerUrl)}" alt=""></div></div>` : ""}</div>
+      ${imageField("logo", "Logo", s.logoUrl)}
+      ${imageField("banner", "Homepage banner", s.bannerUrl)}
       <button class="btn btn-primary" type="submit" id="save">Save settings</button>
       <p class="small" id="st"></p>
     </form>`;
 
+  bindImageField("logo");
+  bindImageField("banner");
   document.getElementById("sf").addEventListener("submit", async (e) => {
     e.preventDefault();
     const st = document.getElementById("st");
@@ -593,10 +674,14 @@ async function settings() {
           linkedin: val("s-linkedin"),
         },
       };
-      const logo = document.getElementById("logo").files[0];
-      if (logo) data.logoUrl = (await store.uploadFile("brand-logos", logo)).url;
-      const banner = document.getElementById("banner").files[0];
-      if (banner) data.bannerUrl = (await store.uploadFile("car-images", banner)).url;
+      const logo = readImageField("logo");
+      data.logoUrl = logo.file
+        ? (await store.uploadFile("brand-logos", logo.file)).url
+        : logo.url;
+      const banner = readImageField("banner");
+      data.bannerUrl = banner.file
+        ? (await store.uploadFile("car-images", banner.file)).url
+        : banner.url;
       await store.saveSettings(data);
       st.textContent = "Saved.";
       toast("Settings saved");
