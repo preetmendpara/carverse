@@ -648,17 +648,11 @@ input, select, textarea { border-radius: 0; }
   display: flex; align-items: center; gap: 34px; width: max-content;
   animation: marquee 16s linear infinite;
 }
-@font-face {
-  font-family: "Latenza Script";
-  src: url("../assets/fonts/latenza-script.woff2") format("woff2");
-  font-weight: 400; font-style: normal; font-display: swap;
-}
-
 /* A connecting script, so the caps and wide tracking the condensed face
    wanted are removed — both break the joins between letters. Scripts also
    carry a small x-height for their em, hence the larger size. */
 .strip-track span {
-  font-family: "Latenza Script", var(--display), cursive;
+  font-family: "Great Vibes", var(--display), cursive;
   font-size: clamp(38px, 5vw, 74px); font-weight: 400;
   letter-spacing: 0; text-transform: none; white-space: nowrap;
   color: var(--text); opacity: .92;
