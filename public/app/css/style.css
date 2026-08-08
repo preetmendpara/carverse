@@ -682,11 +682,6 @@ input, select, textarea { border-radius: 0; }
    Hero layout — copy left, car right. Previously everything stacked on
    the left and the entire right half sat empty above the fold.
    ===================================================================== */
-:root {
-  --display: "Anton", "Bebas Neue", Impact, sans-serif;
-  --font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-}
-
 .hero { padding: clamp(28px, 5vh, 56px) 0 clamp(40px, 7vh, 72px); }
 
 .hero-inner {
@@ -696,13 +691,14 @@ input, select, textarea { border-radius: 0; }
 .hero-copy { min-width: 0; }
 .hero-copy p { max-width: 46ch; }
 
-/* The column now sets the measure — a ch cap on top of it forced a third
-   line. Anton is heavier than Bebas, so it also wants tighter leading. */
+/* Anton on the hero headline only — the rest of the site keeps Bebas Neue
+   and Inter. The column sets the measure; a ch cap on top of it forced a
+   third line. */
 .hero h1 {
-  max-width: none; line-height: .92; letter-spacing: .005em;
+  font-family: "Anton", "Bebas Neue", Impact, sans-serif;
+  max-width: none; line-height: .92; letter-spacing: .005em; font-weight: 400;
   font-size: clamp(2.4rem, 5.2vw, 4.4rem);
 }
-h1, h2 { font-weight: 400; }
 .hero-stage { margin-top: 0; height: clamp(320px, 34vw, 460px); }
 
 @media (max-width: 900px) {
