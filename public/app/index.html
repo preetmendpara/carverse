@@ -30,7 +30,11 @@
           <input id="hero-q" placeholder="Search brand, model or fuel type…" aria-label="Search cars">
           <button class="btn btn-primary" type="submit">Search</button>
         </form>
-        <div id="hero-banner" data-parallax></div>
+        <div class="hero-stage" data-hero-item>
+          <span class="stage-type" id="stage-type" aria-hidden="true">120</span>
+          <div class="stage-strip" aria-hidden="true"><div class="strip-track" id="stage-strip"></div></div>
+          <div class="stage-car" id="hero-banner" data-parallax></div>
+        </div>
         <div class="hero-stats" data-hero-item>
           <div class="stat"><div class="num" data-count="120" data-count-suffix="+">0</div><div class="lbl">Cars listed</div></div>
           <div class="stat"><div class="num" data-count="24" data-count-suffix="+">0</div><div class="lbl">Premium brands</div></div>

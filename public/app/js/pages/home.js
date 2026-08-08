@@ -1,5 +1,5 @@
 import { renderLayout, esc } from "../../components/layout.js";
-import { renderCars } from "../../components/car-card.js";
+import { renderCars, carCover } from "../../components/car-card.js";
 import { listCars, listBrands } from "../core/store.js";
 import { mountChatbot } from "../features/chatbot.js";
 import { revealGrid, refreshMotionFx } from "../features/motion-fx.js";
@@ -12,9 +12,13 @@ import { fallbackCars } from "../data/fallback-cars.js";
 
   if (settings.heroTitle) document.getElementById("hero-title").textContent = settings.heroTitle;
   if (settings.heroSubtitle) document.getElementById("hero-sub").textContent = settings.heroSubtitle;
-  if (settings.bannerUrl) {
-    document.getElementById("hero-banner").innerHTML =
-      `<div class="hero-banner"><img src="${esc(settings.bannerUrl)}" alt="Homepage banner"></div>`;
+  // Word strip running behind the hero car.
+  const strip = document.getElementById("stage-strip");
+  if (strip) {
+    const words = ["Certified", "360° Walkaround", "Verified Specs", "AI Assistant", "Inspected"];
+    strip.innerHTML = [...words, ...words]
+      .map((w) => `<span>${esc(w)}</span><span class="dot">•</span>`)
+      .join("");
   }
 
   document.getElementById("hero-search").addEventListener("submit", (e) => {
@@ -30,6 +34,17 @@ import { fallbackCars } from "../data/fallback-cars.js";
   const [dbCars, dbBrands] = await Promise.all([listCars(), listBrands()]);
   const cars = dbCars.length ? dbCars : fallbackCars();
   const brands = dbBrands.length ? dbBrands : fallbackBrands();
+
+  // Hero stage: the live inventory count sits behind the car, and the car is
+  // the configured banner if there is one, otherwise the first featured photo.
+  const stageType = document.getElementById("stage-type");
+  if (stageType) stageType.textContent = String(cars.length || 120);
+
+  const stageCar = document.getElementById("hero-banner");
+  const heroImage = settings.bannerUrl || carCover(cars.find((c) => c.featured) || cars[0] || {});
+  if (stageCar && heroImage) {
+    stageCar.innerHTML = `<img src="${esc(heroImage)}" alt="" fetchpriority="high">`;
+  }
 
   const featured = cars.filter((c) => c.featured);
   renderCars(document.getElementById("featured"), featured.length ? featured : [], "");

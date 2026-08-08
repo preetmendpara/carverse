@@ -614,3 +614,76 @@ input, select, textarea { border-radius: 0; }
   .hero-stats .stat::after { display: none; }
   #chat-fab:hover { transform: none; }
 }
+
+/* =====================================================================
+   Hero stage — layered composition: oversized type behind, a word strip
+   running through the middle, the car sitting on top of both.
+   ===================================================================== */
+.hero-stage {
+  position: relative;
+  display: grid; place-items: center;
+  height: clamp(300px, 40vw, 540px);
+  margin-top: 44px;
+  overflow: hidden;
+}
+
+/* The number sits behind everything, cropped by the stage on purpose. */
+.stage-type {
+  position: absolute; z-index: 1; user-select: none;
+  font-family: var(--display); font-weight: 400;
+  font-size: clamp(200px, 36vw, 520px); line-height: .78;
+  letter-spacing: -.02em; color: var(--text);
+  /* Fades out toward the base so the type reads as lighting, not a block. */
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, rgba(0,0,0,.35) 100%);
+          mask-image: linear-gradient(180deg, #000 55%, rgba(0,0,0,.35) 100%);
+}
+
+/* Word strip: above the type, below the car — the car interrupts it. */
+.stage-strip {
+  position: absolute; z-index: 2; left: 0; right: 0; top: 50%;
+  transform: translateY(-50%); overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.strip-track {
+  display: flex; align-items: center; gap: 34px; width: max-content;
+  animation: marquee 30s linear infinite;
+}
+.strip-track span {
+  font-size: clamp(20px, 2.6vw, 34px); font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
+  color: var(--text);
+}
+.strip-track .dot { font-size: 18px; opacity: .5; }
+.hero-stage:hover .strip-track { animation-play-state: paused; }
+
+/* The car itself. The radial mask melts a rectangular photo into the black
+   background, so an ordinary listing photo works — no cut-out PNG needed. */
+/* inset:0 gives the image a definite box to size against — with a grid item
+   that only had `height:100%`, the photo resolved to its intrinsic height and
+   overflowed the stage. */
+/* The track must be explicit: an `auto` row sizes to the photo's intrinsic
+   height, so height:100% resolved against that instead of the stage. */
+.stage-car {
+  position: absolute; inset: 0; z-index: 3; display: grid; place-items: center;
+  grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr);
+}
+/* Fill the box and let object-fit keep the ratio: with auto sizing the
+   max-width cap won the cascade and the photo overflowed the stage. */
+.stage-car img, .stage-car .hero-banner {
+  width: 100%; height: 100%; max-width: 100%;
+  object-fit: contain; border: 0; margin: 0;
+}
+.stage-car img {
+  -webkit-mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 52%, transparent 100%);
+          mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 52%, transparent 100%);
+  filter: drop-shadow(0 30px 60px rgba(0,0,0,.9));
+}
+
+@media (max-width: 720px) {
+  .hero-stage { height: clamp(220px, 58vw, 320px); margin-top: 30px; }
+  .strip-track { gap: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .strip-track { animation: none; }
+}
