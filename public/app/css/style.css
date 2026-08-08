@@ -798,3 +798,43 @@ input, select, textarea { border-radius: 0; }
 :root.theme-switching *::before, :root.theme-switching *::after {
   transition: none !important;
 }
+
+/* =====================================================================
+   Wordmark — Bodoni, with a highlight that sweeps across on a loop.
+   The gradient is clipped to the glyphs, so the shine rides the letters
+   themselves rather than a box behind them.
+   ===================================================================== */
+.brand span, .admin-side .brand {
+  font-family: "Bodoni Moda", "Didot", Georgia, serif;
+  font-weight: 700; letter-spacing: .1em; font-size: 1.15rem;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .brand span, .admin-side .brand {
+    /* Base sits at .72 alpha — dim enough that the full-strength band reads
+       as a highlight, still 9:1 against the page in both themes. */
+    background-image: linear-gradient(100deg,
+      rgba(var(--fx-rgb), .72) 0%, rgba(var(--fx-rgb), .72) 40%,
+      rgb(var(--fx-rgb)) 50%,
+      rgba(var(--fx-rgb), .72) 60%, rgba(var(--fx-rgb), .72) 100%);
+    background-size: 260% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    animation: brand-shine 5.5s linear infinite;
+  }
+}
+
+@keyframes brand-shine {
+  from { background-position: 130% 0; }
+  to   { background-position: -30% 0; }
+}
+
+/* Transparent glyphs depend entirely on the gradient painting, so anything
+   that stops the animation must also restore a solid colour. */
+@media (prefers-reduced-motion: reduce) {
+  .brand span, .admin-side .brand {
+    animation: none; background-image: none;
+    -webkit-text-fill-color: currentColor; color: var(--text);
+  }
+}
