@@ -307,6 +307,10 @@ const SIMPLE_FIELDS = [
   ["groundClearance", "Ground clearance", "text"],
 ];
 
+// A full URL, or a site-relative path so images committed under
+// public/app/uploads/ can be used without Firebase Storage.
+const IMAGE_REF = /^(https?:\/\/|\/)/i;
+
 const IMAGE_GROUPS = [
   ["mainImage", "Main image", "car-images", false],
   ["thumbnail", "Thumbnail", "thumbnails", false],
@@ -431,7 +435,7 @@ async function carForm(car = null, brandList = null) {
       const urls = urlBox.value
         .split(/[\n,]+/)
         .map((s) => s.trim())
-        .filter((s) => /^https?:\/\//i.test(s));
+        .filter((s) => IMAGE_REF.test(s));
       if (!urls.length) return;
       if (!multi) existing.innerHTML = "";
       for (const url of multi ? urls : urls.slice(-1)) {
@@ -499,7 +503,7 @@ async function carForm(car = null, brandList = null) {
         const pasted = (document.querySelector(`[data-imgurl="${key}"]`)?.value || "")
           .split(/[\n,]+/)
           .map((s) => s.trim())
-          .filter((s) => /^https?:\/\//i.test(s));
+          .filter((s) => IMAGE_REF.test(s));
         const all = [...kept, ...uploaded, ...pasted];
         data[key] = multi ? all : all[all.length - 1] || null;
       }
