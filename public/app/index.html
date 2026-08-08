@@ -8,7 +8,7 @@
   <link rel="icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,17 +23,21 @@
   <main>
     <section class="hero" data-hero>
       <div class="container">
-        <span class="eyebrow" data-hero-item>Curated Luxury Inventory</span>
-        <h1 id="hero-title" data-hero-item>Find the car that fits your life.</h1>
-        <p id="hero-sub" style="max-width:620px" data-hero-item>Real specifications, real photos, interactive 3D models and an AI assistant trained on our live inventory.</p>
-        <form class="hero-search" id="hero-search" data-hero-item>
-          <input id="hero-q" placeholder="Search brand, model or fuel type…" aria-label="Search cars">
-          <button class="btn btn-primary" type="submit">Search</button>
-        </form>
-        <div class="hero-stage" data-hero-item>
-          <div class="stage-strip" id="stage-strip-box" aria-hidden="true"><div class="strip-track" id="stage-strip"></div></div>
-          <div class="stage-car" id="hero-banner" data-parallax>
-            <img src="assets/hero-car.png" alt="" fetchpriority="high" width="408" height="612">
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <span class="eyebrow" data-hero-item>Curated Luxury Inventory</span>
+            <h1 id="hero-title" data-hero-item>Find the car that fits your life.</h1>
+            <p id="hero-sub" data-hero-item>Real specifications, real photos, interactive 3D models and an AI assistant trained on our live inventory.</p>
+            <form class="hero-search" id="hero-search" data-hero-item>
+              <input id="hero-q" placeholder="Search brand, model or fuel type…" aria-label="Search cars">
+              <button class="btn btn-primary" type="submit">Search</button>
+            </form>
+          </div>
+          <div class="hero-stage" data-hero-item>
+            <div class="stage-strip" id="stage-strip-box" aria-hidden="true"><div class="strip-track" id="stage-strip"></div></div>
+            <div class="stage-car" id="hero-banner" data-parallax>
+              <img src="assets/hero-car.png" alt="" fetchpriority="high" width="408" height="612">
+            </div>
           </div>
         </div>
         <div class="hero-stats" data-hero-item>

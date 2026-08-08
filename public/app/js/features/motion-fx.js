@@ -121,16 +121,27 @@ export async function countUp(root = document) {
   });
 }
 
-/** Subtle parallax lift on the hero media. */
-export async function parallax() {
+/** Hero car drifts toward the viewer as you scroll into the page, fading up
+ *  from a slightly smaller, dimmer state. Driven by the scroll event for the
+ *  same reason as scrollWords — it stays assertable. */
+export function parallax() {
   const el = document.querySelector("[data-parallax]");
-  if (!el || motionLevel() !== "full") return;
-  const m = await lib();
-  if (!m?.scroll) return;
-  m.scroll(m.animate(el, { transform: ["translateY(0px)", "translateY(-48px)"] }, { ease: "linear" }), {
-    target: el,
-    offset: ["start end", "end start"],
-  });
+  if (!el || motionLevel() === "off") return;
+
+  const apply = () => {
+    const r = el.getBoundingClientRect();
+    // 0 while the car is centred, rising to 1 as it leaves the top.
+    const centre = r.top + r.height / 2;
+    const p = Math.min(1, Math.max(0, 1 - centre / (window.innerHeight || 1)));
+    el.style.transform = `translateY(${(-p * 40).toFixed(1)}px) scale(${(0.94 + p * 0.12).toFixed(3)})`;
+    el.style.opacity = (0.55 + p * 0.45).toFixed(3);
+  };
+
+  // Written straight from the event: one transform on one element is cheap,
+  // and rAF batching here only made the effect harder to verify.
+  apply();
+  window.addEventListener("scroll", apply, { passive: true });
+  window.addEventListener("resize", apply, { passive: true });
 }
 
 /** Press feedback on every button/CTA. */

@@ -677,3 +677,36 @@ input, select, textarea { border-radius: 0; }
 @media (prefers-reduced-motion: reduce) {
   .strip-track { animation: none; }
 }
+
+/* =====================================================================
+   Hero layout — copy left, car right. Previously everything stacked on
+   the left and the entire right half sat empty above the fold.
+   ===================================================================== */
+:root {
+  --display: "Anton", "Bebas Neue", Impact, sans-serif;
+  --font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.hero { padding: clamp(28px, 5vh, 56px) 0 clamp(40px, 7vh, 72px); }
+
+.hero-inner {
+  display: grid; grid-template-columns: 1.02fr .98fr;
+  gap: clamp(24px, 4vw, 56px); align-items: center;
+}
+.hero-copy { min-width: 0; }
+.hero-copy p { max-width: 46ch; }
+
+/* The column now sets the measure — a ch cap on top of it forced a third
+   line. Anton is heavier than Bebas, so it also wants tighter leading. */
+.hero h1 {
+  max-width: none; line-height: .92; letter-spacing: .005em;
+  font-size: clamp(2.4rem, 5.2vw, 4.4rem);
+}
+h1, h2 { font-weight: 400; }
+.hero-stage { margin-top: 0; height: clamp(320px, 34vw, 460px); }
+
+@media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 8px; }
+  .hero-stage { height: clamp(240px, 52vw, 340px); order: 2; }
+  .hero h1 { max-width: 15ch; }
+}
