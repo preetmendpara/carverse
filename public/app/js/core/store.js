@@ -1,5 +1,5 @@
 // Thin, reusable Firestore/Storage data layer. No hardcoded data anywhere.
-import { db, storage } from "../../firebase/firebase.js";
+import { auth, db } from "../../firebase/firebase.js";
 import { ADMIN_UIDS } from "../../firebase/config.js";
 import {
   collection,
@@ -16,12 +16,6 @@ import {
   limit,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 export {
   collection,
@@ -242,24 +236,30 @@ export async function isAdmin(uid) {
 }
 
 /* -------------------------------- storage ------------------------------ */
+// Uploads go to Cloudflare R2 through the site's own Worker (see worker.js),
+// which verifies the caller's Firebase ID token before writing anything.
+// Returns { url, path } exactly like the old Firebase Storage version.
 export async function uploadFile(folder, file) {
-  const clean = file.name.replace(/[^\w.\-]/g, "_");
-  const path = `${folder}/${Date.now()}_${clean}`;
-  const r = ref(storage, path);
-  try {
-    await withTimeout(uploadBytes(r, file), 60000, `Uploading ${file.name}`);
-  } catch (err) {
-    // A missing bucket and a denied write both surface as opaque SDK codes.
-    const code = err?.code || "";
-    if (code === "storage/unauthorized")
-      throw new Error("Storage rejected the upload — sign in as an admin, or check storage.rules.");
-    if (code === "storage/retry-limit-exceeded" || code === "storage/unknown")
-      throw new Error(
-        "Storage is not reachable. Enable Firebase Storage for this project, or paste an image URL instead."
-      );
-    throw err;
+  const user = auth.currentUser;
+  if (!user) throw new Error("Sign in as an admin before uploading files.");
+
+  const body = new FormData();
+  body.append("file", file);
+  body.append("folder", folder);
+
+  const res = await withTimeout(
+    fetch("/api/upload", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+      body,
+    }),
+    60000,
+    `Uploading ${file.name}`
+  );
+
+  if (!res.ok) {
+    const reason = await res.json().catch(() => ({}));
+    throw new Error(reason.error || `Upload failed (${res.status}).`);
   }
-  const url = await withTimeout(getDownloadURL(r), 20000, `Reading URL for ${file.name}`);
-  return { url, path };
+  return res.json();
 }
-export const deleteFile = (path) => deleteObject(ref(storage, path)).catch(() => {});
