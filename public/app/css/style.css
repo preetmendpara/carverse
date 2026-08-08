@@ -825,9 +825,13 @@ input, select, textarea { border-radius: 0; }
   }
 }
 
+/* The sweep occupies the first quarter of the cycle and the rest is a hold,
+   so the highlight reads as a repeating glint rather than a band travelling
+   across the letters without pause. */
 @keyframes brand-shine {
-  from { background-position: 130% 0; }
-  to   { background-position: -30% 0; }
+  0%   { background-position: 130% 0; }
+  26%  { background-position: -30% 0; }
+  100% { background-position: -30% 0; }
 }
 
 /* Transparent glyphs depend entirely on the gradient painting, so anything
