@@ -384,7 +384,7 @@ async function carForm(car = null, brandList = null) {
       <div class="divider"></div>
       <h3>3D model (GLB / GLTF)</h3>
       <div class="field">
-        <input type="file" id="model" accept=".glb,.gltf,model/gltf-binary,model/gltf+json">
+        <input type="file" id="model-file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json">
         ${car?.modelUrl ? `<p class="small">Current model uploaded. <button type="button" class="btn btn-sm btn-ghost" id="rm-model">Remove</button></p>` : ""}
       </div>
 
@@ -508,7 +508,8 @@ async function carForm(car = null, brandList = null) {
         data[key] = multi ? all : all[all.length - 1] || null;
       }
 
-      const modelFile = document.getElementById("model").files[0];
+      // NB: not "model" — that id belongs to the car's Model text field.
+      const modelFile = document.getElementById("model-file").files[0];
       if (modelFile) {
         st.textContent = "Uploading 3D model…";
         const up = await store.uploadFile("3d-models", modelFile);
