@@ -691,13 +691,23 @@ input, select, textarea { border-radius: 0; }
 .hero-copy { min-width: 0; }
 .hero-copy p { max-width: 46ch; }
 
-/* Anton on the hero headline only — the rest of the site keeps Bebas Neue
-   and Inter. The column sets the measure; a ch cap on top of it forced a
-   third line. */
+/* Bodoni on the hero headline only — the rest of the site keeps Bebas Neue
+   and Inter. Its hairlines need generous size to survive; below roughly
+   40px the thin strokes start to disappear against black. */
 .hero h1 {
-  font-family: "Anton", "Bebas Neue", Impact, sans-serif;
-  max-width: none; line-height: .92; letter-spacing: .005em; font-weight: 400;
-  font-size: clamp(2.4rem, 5.2vw, 4.4rem);
+  font-family: "Bodoni Moda", "Didot", Georgia, serif;
+  font-weight: 700; font-optical-sizing: auto;
+  max-width: none; line-height: 1.02; letter-spacing: -.005em;
+  /* Sized so "Extraordinary cars," clears the column on one line — serif caps
+     run much wider than the condensed sans this replaced. */
+  font-size: clamp(2rem, 4.15vw, 3.5rem);
+  text-transform: none; /* mixed case shows the thick/thin contrast far better */
+}
+/* A hairline rule under the headline, echoing the serif's thin strokes. */
+.hero-copy > p { position: relative; padding-top: 22px; }
+.hero-copy > p::before {
+  content: ""; position: absolute; top: 0; left: 0; width: 68px; height: 1px;
+  background: var(--text); opacity: .4;
 }
 .hero-stage { margin-top: 0; height: clamp(320px, 34vw, 460px); }
 
