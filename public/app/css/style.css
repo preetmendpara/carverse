@@ -704,16 +704,16 @@ input, select, textarea { border-radius: 0; }
 .hero-copy { min-width: 0; }
 .hero-copy p { max-width: 46ch; }
 
-/* Bodoni on the hero headline only — the rest of the site keeps Bebas Neue
-   and Inter. Its hairlines need generous size to survive; below roughly
-   40px the thin strokes start to disappear against black. */
+/* Playfair on the hero headline only — the rest of the site keeps Bebas Neue
+   and Inter. Chosen over Bodoni because its stems stay solid on a dark
+   background, where Bodoni's hairlines thin out. */
 .hero h1 {
-  font-family: "Bodoni Moda", "Didot", Georgia, serif;
-  font-weight: 700; font-optical-sizing: auto;
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 800;
   max-width: none; line-height: 1.02; letter-spacing: -.005em;
-  /* Sized so "Extraordinary cars," clears the column on one line — serif caps
-     run much wider than the condensed sans this replaced. */
-  font-size: clamp(2rem, 4.15vw, 3.5rem);
+  /* "Drive what" is short, so the line can carry more weight than the longer
+     headline it replaced. */
+  font-size: clamp(2.6rem, 5.4vw, 4.6rem);
   text-transform: none; /* mixed case shows the thick/thin contrast far better */
 }
 /* A hairline rule under the headline, echoing the serif's thin strokes. */
@@ -801,7 +801,7 @@ input, select, textarea { border-radius: 0; }
 }
 
 /* =====================================================================
-   Wordmark — Bodoni, with a highlight that sweeps across on a loop.
+   Wordmark — display face with a highlight that sweeps across on a loop.
    The gradient is clipped to the glyphs, so the shine rides the letters
    themselves rather than a box behind them.
    ===================================================================== */
@@ -812,7 +812,7 @@ input, select, textarea { border-radius: 0; }
 }
 
 .brand span, .admin-side .brand {
-  font-family: "Vengeance At Sea", "Bodoni Moda", Georgia, serif;
+  font-family: "Vengeance At Sea", Georgia, serif;
   /* The face is a display script with its own weight and generous side
      bearings, so it wants no synthetic bold and tighter tracking. */
   font-weight: 400; letter-spacing: .04em; font-size: 1.5rem;
