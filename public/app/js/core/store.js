@@ -246,7 +246,19 @@ export async function uploadFile(folder, file) {
   const clean = file.name.replace(/[^\w.\-]/g, "_");
   const path = `${folder}/${Date.now()}_${clean}`;
   const r = ref(storage, path);
-  await withTimeout(uploadBytes(r, file), 60000, `Uploading ${file.name}`);
+  try {
+    await withTimeout(uploadBytes(r, file), 60000, `Uploading ${file.name}`);
+  } catch (err) {
+    // A missing bucket and a denied write both surface as opaque SDK codes.
+    const code = err?.code || "";
+    if (code === "storage/unauthorized")
+      throw new Error("Storage rejected the upload — sign in as an admin, or check storage.rules.");
+    if (code === "storage/retry-limit-exceeded" || code === "storage/unknown")
+      throw new Error(
+        "Storage is not reachable. Enable Firebase Storage for this project, or paste an image URL instead."
+      );
+    throw err;
+  }
   const url = await withTimeout(getDownloadURL(r), 20000, `Reading URL for ${file.name}`);
   return { url, path };
 }
