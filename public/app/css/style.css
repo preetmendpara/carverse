@@ -648,15 +648,22 @@ input, select, textarea { border-radius: 0; }
   display: flex; align-items: center; gap: 34px; width: max-content;
   animation: marquee 16s linear infinite;
 }
-/* Bebas Neue rather than the body sans: condensed caps carry a wide strip
-   far better, and it's already loaded for the section headings. */
+@font-face {
+  font-family: "Latenza Script";
+  src: url("../assets/fonts/latenza-script.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+
+/* A connecting script, so the caps and wide tracking the condensed face
+   wanted are removed — both break the joins between letters. Scripts also
+   carry a small x-height for their em, hence the larger size. */
 .strip-track span {
-  font-family: var(--display);
-  font-size: clamp(28px, 3.6vw, 52px); font-weight: 400;
-  letter-spacing: .18em; text-transform: uppercase; white-space: nowrap;
+  font-family: "Latenza Script", var(--display), cursive;
+  font-size: clamp(38px, 5vw, 74px); font-weight: 400;
+  letter-spacing: 0; text-transform: none; white-space: nowrap;
   color: var(--text); opacity: .92;
 }
-.strip-track .dot { font-size: .5em; opacity: .45; letter-spacing: 0; }
+.strip-track .dot { font-size: .34em; opacity: .45; position: relative; top: -.35em; }
 /* Click the strip to hold it — hovering anywhere over the stage used to stop
    it, which made the pause feel like it fired on unrelated cursor movement. */
 .stage-strip.is-paused .strip-track { animation-play-state: paused; }
