@@ -28,6 +28,50 @@ export function emptyState(target, text = "No cars available.") {
   target.innerHTML = `<div class="empty">${esc(text)}</div>`;
 }
 
+/* -------------------------------- theme -------------------------------- */
+const THEME_KEY = "carverse-theme";
+
+/** Saved choice wins; otherwise follow the operating system. */
+export function initTheme() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(THEME_KEY);
+  } catch { /* storage blocked */ }
+  const system = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  document.documentElement.dataset.theme = saved || system;
+}
+
+export function toggleTheme() {
+  const root = document.documentElement;
+  const next = root.dataset.theme === "light" ? "dark" : "light";
+  // Every colour has a transition for hover; without this the switch smears
+  // across the whole page for half a second.
+  root.classList.add("theme-switching");
+  root.dataset.theme = next;
+  requestAnimationFrame(() => setTimeout(() => root.classList.remove("theme-switching"), 60));
+  try {
+    localStorage.setItem(THEME_KEY, next);
+  } catch { /* storage blocked */ }
+  return next;
+}
+
+const themeButton = () =>
+  `<button class="theme-toggle" id="theme-toggle" type="button"
+     aria-label="Switch between dark and light mode" title="Switch theme">
+     <span class="icon-moon" aria-hidden="true">☾</span><span class="icon-sun" aria-hidden="true">☀</span>
+   </button>`;
+
+/** Adds the toggle to the header shell that ships in each page's HTML.
+ *  renderLayout only repaints the header when Firestore settings override
+ *  something, so the button cannot rely on that repaint to exist. */
+export function mountThemeToggle() {
+  if (document.getElementById("theme-toggle")) return;
+  const nav = document.querySelector(".site-header .nav");
+  if (!nav) return;
+  nav.insertAdjacentHTML("beforeend", themeButton());
+  document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
+}
+
 // `base` is the relative path back to /app (e.g. "" for index, "../" for pages)
 const NAV = [
   ["", "Home"],
@@ -40,6 +84,7 @@ const NAV = [
 ];
 
 export async function renderLayout({ base = "", active = "" } = {}) {
+  initTheme();
   initAnimations();
 
   const paint = (s = {}) => {
@@ -64,10 +109,12 @@ export async function renderLayout({ base = "", active = "" } = {}) {
               }">${label}</a>`
           ).join("")}
         </nav>
+        ${themeButton()}
       </div>`;
       document
         .getElementById("nav-toggle")
         ?.addEventListener("click", () => document.getElementById("nav-links").classList.toggle("open"));
+      document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
     }
 
     const footer = document.getElementById("site-footer");
@@ -112,6 +159,7 @@ export async function renderLayout({ base = "", active = "" } = {}) {
   document
     .getElementById("nav-toggle")
     ?.addEventListener("click", () => document.getElementById("nav-links")?.classList.toggle("open"));
+  mountThemeToggle();
   if (document.title.includes("%SITE%")) document.title = document.title.replace("%SITE%", "CarVerse");
 
   initMotionFx();

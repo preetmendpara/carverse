@@ -7,14 +7,19 @@ import {
   onAuthStateChanged,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { esc, money, toast } from "../../components/layout.js";
+import { esc, money, toast, initTheme, toggleTheme } from "../../components/layout.js";
 import { carTitle } from "../../components/car-card.js";
 import * as store from "../core/store.js";
 import { matchesBrand } from "../core/catalog.js";
 import { initAnimations } from "../features/animate.js";
 import { isDemoAdmin, demoSignOut } from "../features/demo-admin.js";
 
+initTheme();
 initAnimations();
+
+// The admin shell is static markup, so its toggle is wired here rather than
+// coming from renderLayout().
+document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
 
 const view = document.getElementById("view");
 const modalBack = document.getElementById("modal-back");

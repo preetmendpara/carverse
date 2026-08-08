@@ -11,7 +11,7 @@
   --muted: #a1a1a1;
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow: 0 1px 2px rgba(var(--shade-rgb), 0.6);
   --max: 1200px;
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
 }
@@ -46,7 +46,7 @@ p { margin: 0 0 1rem; color: var(--muted); }
 /* ------------------------------- header ------------------------------- */
 .site-header {
   position: sticky; top: 0; z-index: 40;
-  background: rgba(0, 0, 0, .9);
+  background: rgba(var(--shade-rgb), .9);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -71,9 +71,9 @@ p { margin: 0 0 1rem; color: var(--muted); }
   border: 1px solid var(--border); background: var(--card); color: var(--text);
   font: inherit; font-size: 14px; cursor: pointer; transition: background .15s, border-color .15s;
 }
-.btn:hover { background: var(--card-2); border-color: #3a3a3a; }
-.btn-primary { background: var(--text); color: #000; border-color: var(--text); font-weight: 600; }
-.btn-primary:hover { background: #e5e5e5; }
+.btn:hover { background: var(--card-2); border-color: var(--border-strong); }
+.btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+.btn-primary:hover { opacity: .88; }
 .btn-ghost { background: transparent; }
 .btn-sm { padding: 7px 12px; font-size: 13px; }
 .btn-block { width: 100%; }
@@ -85,7 +85,7 @@ input, select, textarea {
   width: 100%; padding: 10px 12px; background: var(--surface); color: var(--text);
   border: 1px solid var(--border); border-radius: var(--radius-sm); font: inherit; font-size: 14px;
 }
-input:focus, select:focus, textarea:focus { outline: none; border-color: #4a4a4a; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--border-strong); }
 textarea { min-height: 110px; resize: vertical; }
 .field { margin-bottom: 14px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -101,7 +101,7 @@ textarea { min-height: 110px; resize: vertical; }
 .car-card { overflow: hidden; display: flex; flex-direction: column; }
 .car-thumb { aspect-ratio: 16 / 10; background: var(--surface); overflow: hidden; }
 .car-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.car-thumb .ph { height: 100%; display: grid; place-items: center; color: #555; font-size: 12px; letter-spacing: .1em; }
+.car-thumb .ph { height: 100%; display: grid; place-items: center; color: var(--muted); font-size: 12px; letter-spacing: .1em; }
 .car-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
 .car-brand { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .car-name { font-size: 16px; font-weight: 600; }
@@ -117,7 +117,7 @@ textarea { min-height: 110px; resize: vertical; }
 .brand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
 .brand-card { padding: 20px; text-align: center; }
 .brand-card img { height: 40px; max-width: 100%; display: block; margin: 0 auto 12px; object-fit: contain; filter: grayscale(1) brightness(2); }
-.brand-card .logo-ph { height: 40px; display: grid; place-items: center; color: #666; margin-bottom: 12px; }
+.brand-card .logo-ph { height: 40px; display: grid; place-items: center; color: var(--muted); margin-bottom: 12px; }
 
 /* -------------------------------- hero -------------------------------- */
 .hero { padding: 84px 0 56px; border-bottom: 1px solid var(--border); }
@@ -156,7 +156,7 @@ textarea { min-height: 110px; resize: vertical; }
 #viewer-wrap { position: relative; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #060606; }
 #viewer-canvas { width: 100%; height: 420px; display: block; }
 .viewer-bar { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; }
-.viewer-hint { position: absolute; bottom: 10px; left: 12px; font-size: 12px; color: #666; }
+.viewer-hint { position: absolute; bottom: 10px; left: 12px; font-size: 12px; color: var(--muted); }
 
 /* ------------------------------- compare ------------------------------ */
 .compare-table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -167,7 +167,7 @@ textarea { min-height: 110px; resize: vertical; }
 /* ------------------------------- chatbot ------------------------------ */
 #chat-fab {
   position: fixed; right: 20px; bottom: 20px; z-index: 60;
-  background: var(--text); color: #000; border: none; border-radius: 999px;
+  background: var(--text); color: var(--bg); border: none; border-radius: 999px;
   padding: 13px 20px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--shadow);
 }
 #chat-panel {
@@ -179,7 +179,7 @@ textarea { min-height: 110px; resize: vertical; }
 .chat-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); font-weight: 600; }
 .chat-log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .msg { max-width: 85%; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 14px; white-space: pre-wrap; }
-.msg.user { align-self: flex-end; background: var(--text); color: #000; }
+.msg.user { align-self: flex-end; background: var(--text); color: var(--bg); }
 .msg.bot { align-self: flex-start; background: var(--card); border: 1px solid var(--border); }
 .chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
 
@@ -193,7 +193,7 @@ textarea { min-height: 110px; resize: vertical; }
 /* ------------------------------- toast -------------------------------- */
 #toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
-  background: var(--text); color: #000; padding: 10px 18px; border-radius: 999px;
+  background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px;
   font-size: 14px; font-weight: 500; z-index: 90; opacity: 0; pointer-events: none; transition: opacity .2s;
 }
 #toast.show { opacity: 1; }
@@ -207,7 +207,7 @@ textarea { min-height: 110px; resize: vertical; }
 @media (max-width: 640px) {
   .nav-links {
     display: none; position: absolute; top: 64px; left: 0; right: 0;
-    flex-direction: column; align-items: stretch; background: #000;
+    flex-direction: column; align-items: stretch; background: var(--bg);
     border-bottom: 1px solid var(--border); padding: 10px 16px;
   }
   .nav-links.open { display: flex; }
@@ -234,7 +234,7 @@ html.light-motion #chat-panel, html.light-motion .site-header { backdrop-filter:
    ===================================================================== */
 :root {
   --display: "Bebas Neue", "Inter", sans-serif;
-  --hairline: rgba(255, 255, 255, .12);
+  --hairline: rgba(var(--fx-rgb), .12);
 }
 
 /* Framer Motion arms elements before animating them in */
@@ -253,7 +253,7 @@ h2 { font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1; }
 /* -------------------------------- header ------------------------------- */
 .site-header { transition: height .25s ease, background .25s ease, border-color .25s ease; }
 .site-header .nav { transition: height .25s ease; }
-.site-header.is-scrolled { background: rgba(0, 0, 0, .82); }
+.site-header.is-scrolled { background: rgba(var(--shade-rgb), .82); }
 .site-header.is-scrolled .nav { height: 54px; }
 .brand { font-family: var(--display); font-size: 22px; letter-spacing: .18em; }
 .nav-links a { position: relative; letter-spacing: .06em; text-transform: uppercase; font-size: 12px; }
@@ -276,8 +276,8 @@ h2 { font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1; }
   transition: color .32s ease, border-color .3s ease, background-position .42s cubic-bezier(.22,1,.36,1),
               transform .18s cubic-bezier(.22,1,.36,1);
 }
-.btn:hover { color: #000; border-color: var(--text); background-position: 0 0; }
-.btn-primary { background-image: linear-gradient(to top, #0a0a0a 0 50%, transparent 50% 100%); }
+.btn:hover { color: var(--bg); border-color: var(--text); background-position: 0 0; }
+.btn-primary { background-image: linear-gradient(to top, var(--bg) 0 50%, transparent 50% 100%); }
 .btn-primary:hover { color: var(--text); border-color: var(--text); }
 .btn.is-pressed { transform: scale(.96); }
 
@@ -285,7 +285,7 @@ h2 { font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1; }
 .hero { position: relative; padding: clamp(88px, 14vh, 150px) 0 clamp(56px, 9vh, 96px); overflow: hidden; }
 .hero::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,.07), transparent 60%);
+  background: radial-gradient(120% 80% at 50% 0%, rgba(var(--fx-rgb), .07), transparent 60%);
 }
 .hero .container { position: relative; z-index: 1; }
 .hero h1 { max-width: 15ch; }
@@ -309,7 +309,7 @@ h2 { font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1; }
 .marquee:hover .marquee-track { animation-play-state: paused; }
 .marquee-track span {
   font-family: var(--display); font-size: clamp(1.4rem, 3vw, 2.1rem);
-  letter-spacing: .1em; color: #4a4a4a; white-space: nowrap; transition: color .3s ease;
+  letter-spacing: .1em; color: var(--muted); white-space: nowrap; transition: color .3s ease;
 }
 .marquee-track span:hover { color: var(--text); }
 @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
@@ -321,15 +321,15 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
   transition: transform .45s cubic-bezier(.22,1,.36,1), border-color .3s ease, box-shadow .45s ease;
 }
 .car-card:hover {
-  transform: translateY(-6px); border-color: rgba(255,255,255,.4);
-  box-shadow: 0 26px 60px -30px rgba(255,255,255,.22);
+  transform: translateY(-6px); border-color: rgba(var(--fx-rgb), .4);
+  box-shadow: 0 26px 60px -30px rgba(var(--fx-rgb), .22);
 }
 .car-thumb { position: relative; aspect-ratio: 4 / 3; }
 .car-thumb img { transition: transform .7s cubic-bezier(.22,1,.36,1), filter .5s ease; filter: none; }
 .car-card:hover .car-thumb img { transform: scale(1.07); filter: saturate(1.08); }
 .car-thumb::after {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,.75), transparent 55%);
+  background: linear-gradient(to top, rgba(var(--shade-rgb), .75), transparent 55%);
   opacity: .8; transition: opacity .4s ease;
 }
 .car-card:hover .car-thumb::after { opacity: .35; }
@@ -342,7 +342,7 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
   border-radius: 0; border-color: var(--hairline);
   transition: transform .4s cubic-bezier(.22,1,.36,1), background .3s ease, border-color .3s ease;
 }
-.brand-card:hover { transform: translateY(-4px); background: var(--card-2); border-color: rgba(255,255,255,.35); }
+.brand-card:hover { transform: translateY(-4px); background: var(--card-2); border-color: rgba(var(--fx-rgb), .35); }
 .brand-card img { transition: transform .4s ease, filter .3s ease; }
 .brand-card:hover img { transform: scale(1.08); filter: grayscale(0) brightness(2.2); }
 
@@ -355,7 +355,7 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 #chat-fab:hover { transform: translateY(-3px); }
 
 /* Active state for wishlist / compare toggles on the car details page */
-.btn.is-active { background: #fff; color: #000; border-color: #fff; }
+.btn.is-active { background: var(--text); color: var(--bg); border-color: var(--text); }
 
 /* ── Scroll-word reveal (scroll-world inspired) ───────────────────────── */
 .scroll-words { font-family: "Bebas Neue", Inter, sans-serif; letter-spacing: .01em;
@@ -388,12 +388,12 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 .btn::before {
   content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%;
   pointer-events: none; opacity: 0;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+  background: linear-gradient(100deg, transparent, rgba(var(--fx-rgb), .55), transparent);
   transform: skewX(-18deg);
   transition: left .62s cubic-bezier(.22,1,.36,1), opacity .2s ease;
 }
 .btn:hover::before { left: 125%; opacity: 1; }
-.btn-primary:hover::before { background: linear-gradient(100deg, transparent, rgba(0,0,0,.4), transparent); }
+.btn-primary:hover::before { background: linear-gradient(100deg, transparent, rgba(var(--shade-rgb), .4), transparent); }
 
 /* Magnetic pull: JS writes --mx/--my, CSS owns the easing so the spring
    still feels right if the script never runs. */
@@ -423,8 +423,8 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 }
 .car-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(255,255,255,.42);
-  box-shadow: 0 18px 40px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.06);
+  border-color: rgba(var(--fx-rgb), .42);
+  box-shadow: 0 18px 40px rgba(var(--shade-rgb), .85), 0 0 0 1px rgba(var(--fx-rgb), .06);
 }
 .car-card .car-thumb img {
   transition: transform .75s cubic-bezier(.22,1,.36,1), filter .5s ease;
@@ -435,7 +435,7 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 .car-card .car-thumb { position: relative; }
 .car-card .car-thumb::after {
   content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, #fff, transparent);
+  background: linear-gradient(90deg, transparent, var(--text), transparent);
   transform: scaleX(0); transform-origin: left;
   transition: transform .6s cubic-bezier(.22,1,.36,1);
 }
@@ -461,7 +461,7 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 }
 .grid-3 .card::before {
   content: ""; position: absolute; left: 0; top: 0; height: 1px; width: 100%;
-  background: linear-gradient(90deg, transparent, #fff, transparent);
+  background: linear-gradient(90deg, transparent, var(--text), transparent);
   transform: scaleX(0); transform-origin: left;
   transition: transform .7s cubic-bezier(.22,1,.36,1);
 }
@@ -475,8 +475,8 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 .grid-3 .card:hover {
   transform: translateY(-8px);
   background: var(--card-2);
-  border-color: rgba(255,255,255,.4);
-  box-shadow: 0 22px 50px rgba(0,0,0,.9);
+  border-color: rgba(var(--fx-rgb), .4);
+  box-shadow: 0 22px 50px rgba(var(--shade-rgb), .9);
 }
 .grid-3 .card:hover::before { transform: scaleX(1); }
 .grid-3 .card:hover::after { opacity: .85; transform: translate(0, 0); }
@@ -509,7 +509,7 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 /* ------------------------------- inputs -------------------------------- */
 input, select, textarea { transition: border-color .3s ease, box-shadow .3s ease, background .3s ease; }
 input:focus, select:focus, textarea:focus {
-  border-color: var(--text); box-shadow: 0 0 0 3px rgba(255,255,255,.09);
+  border-color: var(--text); box-shadow: 0 0 0 3px rgba(var(--fx-rgb), .09);
 }
 input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
 
@@ -574,7 +574,7 @@ input, select, textarea { border-radius: 0; }
   gap: 0; border: 1px solid var(--border); background: var(--surface);
   max-width: 620px; transition: border-color .3s ease, box-shadow .3s ease;
 }
-.hero-search:focus-within { border-color: var(--text); box-shadow: 0 0 0 3px rgba(255,255,255,.08); }
+.hero-search:focus-within { border-color: var(--text); box-shadow: 0 0 0 3px rgba(var(--fx-rgb), .08); }
 .hero-search input {
   border: 0; background: transparent; padding: 16px 18px; font-size: 15px;
 }
@@ -606,9 +606,9 @@ input, select, textarea { border-radius: 0; }
 #chat-fab {
   border: 1px solid var(--text);
   padding: 14px 22px;
-  box-shadow: 0 10px 34px rgba(0, 0, 0, .95);
+  box-shadow: 0 10px 34px rgba(var(--shade-rgb), .95);
 }
-#chat-fab:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,1); }
+#chat-fab:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(var(--shade-rgb), 1); }
 
 @media (prefers-reduced-motion: reduce) {
   .hero-stats .stat::after { display: none; }
@@ -671,7 +671,7 @@ input, select, textarea { border-radius: 0; }
 }
 /* No mask: the artwork carries its own alpha, so a radial fade would only
    eat the bumpers. The shadow follows the cut-out silhouette. */
-.stage-car img { filter: drop-shadow(0 26px 44px rgba(0,0,0,.85)); }
+.stage-car img { filter: drop-shadow(0 26px 44px rgba(var(--shade-rgb), .85)); }
 
 @media (max-width: 720px) {
   .hero-stage { height: clamp(220px, 58vw, 320px); margin-top: 30px; }
@@ -718,4 +718,74 @@ input, select, textarea { border-radius: 0; }
   .hero-inner { grid-template-columns: 1fr; gap: 8px; }
   .hero-stage { height: clamp(240px, 52vw, 340px); order: 2; }
   .hero h1 { max-width: 15ch; }
+}
+
+/* =====================================================================
+   Theme — dark by default, light on [data-theme="light"].
+   Colours flow from these tokens only; nothing below hardcodes black or
+   white, so both themes stay in step.
+     --fx-rgb    overlays that must read against the page background
+     --shade-rgb shadow colour
+   ===================================================================== */
+:root {
+  --fx-rgb: 255, 255, 255;
+  --shade-rgb: 0, 0, 0;
+  --border-strong: #4a4a4a;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f4f4f5;
+  --card: #ffffff;
+  --card-2: #f0f0f1;
+  --border: #d9d9dd;
+  --border-strong: #8a8a90;
+  --text: #0a0a0a;
+  /* #56565c on white is 7.1:1 — comfortably past the 4.5:1 minimum, and
+     still visibly secondary next to --text. */
+  --muted: #56565c;
+  --hairline: rgba(0, 0, 0, .16);
+  --fx-rgb: 0, 0, 0;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .12);
+  color-scheme: light;
+}
+
+/* Light mode needs softer shadows — dark-mode depths read as dirt on white. */
+:root[data-theme="light"] .car-card:hover,
+:root[data-theme="light"] .grid-3 .card:hover {
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .14);
+}
+:root[data-theme="light"] #chat-fab { box-shadow: 0 10px 30px rgba(0, 0, 0, .22); }
+/* Brand logos are inverted for a dark page; undo that on a light one. */
+:root[data-theme="light"] .brand-card img { filter: grayscale(1) brightness(.15); }
+:root[data-theme="light"] .site-header { background: rgba(255, 255, 255, .9); }
+:root[data-theme="light"] .site-header.is-scrolled { background: rgba(255, 255, 255, .86); }
+/* The hero car is a dark cut-out, so it needs a light backdrop to sit on. */
+:root[data-theme="light"] .stage-car img { filter: drop-shadow(0 26px 44px rgba(0, 0, 0, .3)); }
+
+/* ------------------------------ the toggle ----------------------------- */
+.theme-toggle {
+  display: inline-grid; place-items: center;
+  width: 38px; height: 38px; flex: none;
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border); border-radius: 0;
+  cursor: pointer; font-size: 15px; line-height: 1;
+  transition: background .25s ease, border-color .25s ease, transform .25s cubic-bezier(.22,1,.36,1);
+}
+.theme-toggle:hover { background: var(--card-2); border-color: var(--text); transform: translateY(-2px); }
+.theme-toggle:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+:root[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle:hover { transform: none; }
+}
+
+/* Colour transitions are lovely on hover but turn a theme switch into a
+   half-second smear across every element, so suppress them for that frame. */
+:root.theme-switching, :root.theme-switching *,
+:root.theme-switching *::before, :root.theme-switching *::after {
+  transition: none !important;
 }
