@@ -133,8 +133,9 @@ export function parallax() {
     // 0 while the car is centred, rising to 1 as it leaves the top.
     const centre = r.top + r.height / 2;
     const p = Math.min(1, Math.max(0, 1 - centre / (window.innerHeight || 1)));
+    // Scale only — fading the car made it translucent, so the word strip
+    // behind it showed straight through the bodywork.
     el.style.transform = `translateY(${(-p * 40).toFixed(1)}px) scale(${(0.94 + p * 0.12).toFixed(3)})`;
-    el.style.opacity = (0.55 + p * 0.45).toFixed(3);
   };
 
   // Written straight from the event: one transform on one element is cheap,
