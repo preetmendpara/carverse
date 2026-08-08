@@ -494,14 +494,17 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 .section-head[data-revealed]::after { transform: scaleX(1); }
 
 /* ------------------------------ eyebrows ------------------------------- */
-.eyebrow { position: relative; padding-left: 26px; }
+/* Flex so the rule centres on the text itself — absolute positioning fought
+   the label's padding-bottom and left the dash sitting low, reading as a typo. */
+.eyebrow { display: inline-flex; align-items: center; gap: 14px; }
 .eyebrow::before {
-  content: ""; position: absolute; left: 0; top: 50%; width: 18px; height: 1px;
-  background: currentColor; transform: scaleX(0); transform-origin: left;
+  content: ""; flex: none; width: 28px; height: 1px; background: currentColor;
+  opacity: .55; transform: scaleX(0); transform-origin: left;
   transition: transform .8s cubic-bezier(.22,1,.36,1) .15s;
 }
 .eyebrow:is([data-revealed], [data-hero-item])::before,
-[data-revealed] .eyebrow::before { transform: scaleX(1); }
+[data-revealed] .eyebrow::before,
+[data-hero-item] .eyebrow::before { transform: scaleX(1); }
 
 /* ------------------------------- inputs -------------------------------- */
 input, select, textarea { transition: border-color .3s ease, box-shadow .3s ease, background .3s ease; }
@@ -554,4 +557,60 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
   .section-head::after { transform: scaleX(1); transition: none; }
   .marquee-track { animation: none; }
   .car-card[data-revealed] .car-thumb img { animation: none; }
+}
+
+/* =====================================================================
+   UI polish — consistency and clarity over decoration.
+   ===================================================================== */
+
+/* Inputs were the only rounded control left while cards and buttons had
+   already gone square. Match them so the whole system reads deliberate. */
+input, select, textarea { border-radius: 0; }
+
+/* ------------------------------ hero search ---------------------------- */
+/* One unit rather than two floating controls: the field and its button
+   share a single outline, so the search reads as a single affordance. */
+.hero-search {
+  gap: 0; border: 1px solid var(--border); background: var(--surface);
+  max-width: 620px; transition: border-color .3s ease, box-shadow .3s ease;
+}
+.hero-search:focus-within { border-color: var(--text); box-shadow: 0 0 0 3px rgba(255,255,255,.08); }
+.hero-search input {
+  border: 0; background: transparent; padding: 16px 18px; font-size: 15px;
+}
+.hero-search input:focus { box-shadow: none; border: 0; }
+.hero-search .btn { border: 0; padding-inline: 30px; flex: none; }
+
+/* ------------------------------ hero stats ----------------------------- */
+.hero-stats .stat {
+  position: relative; padding: 24px 20px;
+  transition: background .35s ease;
+}
+.hero-stats .stat:hover { background: var(--surface); }
+/* A rule that grows under whichever stat you point at. */
+.hero-stats .stat::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+  background: var(--text); transform: scaleX(0); transform-origin: left;
+  transition: transform .45s cubic-bezier(.22,1,.36,1);
+}
+.hero-stats .stat:hover::after { transform: scaleX(1); }
+.hero-stats .lbl { letter-spacing: .18em; margin-top: 10px; }
+
+/* --------------------------- hero typography --------------------------- */
+/* Keep the existing 15ch measure — it holds the two-line break. */
+.hero h1 { margin-bottom: .35em; }
+.hero p { font-size: clamp(15px, 1.4vw, 17px); line-height: 1.65; color: var(--muted); }
+
+/* ------------------------------- chat fab ------------------------------ */
+/* Sat flush against the stats grid with no separation from the page. */
+#chat-fab {
+  border: 1px solid var(--text);
+  padding: 14px 22px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .95);
+}
+#chat-fab:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-stats .stat::after { display: none; }
+  #chat-fab:hover { transform: none; }
 }
