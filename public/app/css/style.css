@@ -804,9 +804,18 @@ input, select, textarea { border-radius: 0; }
    The gradient is clipped to the glyphs, so the shine rides the letters
    themselves rather than a box behind them.
    ===================================================================== */
+@font-face {
+  font-family: "Vengeance At Sea";
+  src: url("../assets/fonts/vengeance-at-sea.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+
 .brand span, .admin-side .brand {
-  font-family: "Bodoni Moda", "Didot", Georgia, serif;
-  font-weight: 700; letter-spacing: .1em; font-size: 1.15rem;
+  font-family: "Vengeance At Sea", "Bodoni Moda", Georgia, serif;
+  /* The face is a display script with its own weight and generous side
+     bearings, so it wants no synthetic bold and tighter tracking. */
+  font-weight: 400; letter-spacing: .04em; font-size: 1.5rem;
+  text-transform: none;
 }
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
