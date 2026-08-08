@@ -3,11 +3,14 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
 
+# Code has no content hash in its filename, so a long max-age serves stale
+# JS for an hour after every deploy. no-cache still caches — it just
+# revalidates first, which is a 304 when nothing changed.
 /app/css/*
-  Cache-Control: public, max-age=3600
+  Cache-Control: public, no-cache
 
 /app/js/*
-  Cache-Control: public, max-age=3600
+  Cache-Control: public, no-cache
 
 /app/assets/*
   Cache-Control: public, max-age=604800
