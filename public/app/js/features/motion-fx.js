@@ -151,7 +151,9 @@ export function pressable(root = document) {
  *  reduced-motion level, where a cursor-follow effect is pointless or unwanted.
  */
 export function magnetic(root = document) {
-  if (motionLevel() !== "full") return;
+  // Only "off" opts out: this animates a single element, and only while the
+  // cursor is actually on it, so a "light" device can afford it.
+  if (motionLevel() === "off") return;
   if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 
   const STRENGTH = 0.32; // fraction of the cursor's offset from centre
@@ -179,6 +181,54 @@ export function magnetic(root = document) {
   });
 }
 
+/** Thin progress bar across the top, tracking how far down the page you are. */
+export function scrollProgress() {
+  if (motionLevel() === "off" || document.querySelector(".scroll-progress")) return;
+  const bar = document.createElement("div");
+  bar.className = "scroll-progress";
+  document.body.appendChild(bar);
+
+  const onScroll = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.setProperty("--sp", max > 0 ? (window.scrollY / max).toFixed(4) : "0");
+  };
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+}
+
+/** Cards tip toward the cursor. As with magnetic(), JS supplies only the
+ *  angles — CSS owns the transform, so nothing breaks if this never runs. */
+export function tilt(root = document, selector = ".car-card, .grid-3 .card") {
+  // As with magnetic(): one hovered element at a time, fine pointers only.
+  if (motionLevel() === "off") return;
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+  const MAX_DEG = 6;
+
+  root.querySelectorAll(`${selector}`).forEach((el) => {
+    if (el.classList.contains("tilt")) return;
+    el.classList.add("tilt");
+
+    el.addEventListener("pointermove", (e) => {
+      const r = el.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      el.classList.add("is-tilting");
+      el.style.setProperty("--ry", `${(px * MAX_DEG * 2).toFixed(2)}deg`);
+      el.style.setProperty("--rx", `${(-py * MAX_DEG * 2).toFixed(2)}deg`);
+    });
+
+    const reset = () => {
+      el.classList.remove("is-tilting");
+      el.style.setProperty("--rx", "0deg");
+      el.style.setProperty("--ry", "0deg");
+    };
+    el.addEventListener("pointerleave", reset);
+    el.addEventListener("pointercancel", reset);
+  });
+}
+
 export function initMotionFx() {
   headerScroll();
   heroIntro();
@@ -187,6 +237,8 @@ export function initMotionFx() {
   parallax();
   pressable();
   magnetic();
+  tilt();
+  scrollProgress();
   scrollWords();
 }
 
@@ -196,6 +248,7 @@ export function refreshMotionFx(container) {
   countUp(container || document);
   pressable(container || document);
   magnetic(container || document);
+  tilt(container || document);
   scrollWords(container || document);
 }
 

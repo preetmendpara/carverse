@@ -446,3 +446,112 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
   .btn[data-magnetic] { transform: none; }
   .car-card, .car-card:hover, .car-card .car-thumb img { transition: none; transform: none; }
 }
+
+/* =====================================================================
+   Cinematic layer — every remaining component gets depth and reaction.
+   Still strictly monochrome: light, contrast, scale and timing only.
+   ===================================================================== */
+
+/* --------------------------- feature cards ----------------------------- */
+/* Corner brackets draw in, a light bar wipes the top edge, card lifts. */
+.grid-3 .card {
+  position: relative; overflow: hidden;
+  transition: transform .5s cubic-bezier(.22,1,.36,1), border-color .4s ease,
+              background .4s ease, box-shadow .5s ease;
+}
+.grid-3 .card::before {
+  content: ""; position: absolute; left: 0; top: 0; height: 1px; width: 100%;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .7s cubic-bezier(.22,1,.36,1);
+}
+.grid-3 .card::after {
+  content: ""; position: absolute; right: 14px; bottom: 12px;
+  width: 16px; height: 16px; pointer-events: none;
+  border-right: 1px solid var(--text); border-bottom: 1px solid var(--text);
+  opacity: 0; transform: translate(-6px, -6px);
+  transition: opacity .4s ease, transform .5s cubic-bezier(.22,1,.36,1);
+}
+.grid-3 .card:hover {
+  transform: translateY(-8px);
+  background: var(--card-2);
+  border-color: rgba(255,255,255,.4);
+  box-shadow: 0 22px 50px rgba(0,0,0,.9);
+}
+.grid-3 .card:hover::before { transform: scaleX(1); }
+.grid-3 .card:hover::after { opacity: .85; transform: translate(0, 0); }
+.grid-3 .card h3 { transition: letter-spacing .45s cubic-bezier(.22,1,.36,1); }
+.grid-3 .card:hover h3 { letter-spacing: .14em; }
+
+/* ---------------------------- section heads ---------------------------- */
+/* The hairline under each section title draws itself in on reveal. */
+.section-head { position: relative; }
+.section-head::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: var(--text); transform: scaleX(0); transform-origin: left;
+  transition: transform 1.1s cubic-bezier(.22,1,.36,1);
+}
+.section-head[data-revealed]::after { transform: scaleX(1); }
+
+/* ------------------------------ eyebrows ------------------------------- */
+.eyebrow { position: relative; padding-left: 26px; }
+.eyebrow::before {
+  content: ""; position: absolute; left: 0; top: 50%; width: 18px; height: 1px;
+  background: currentColor; transform: scaleX(0); transform-origin: left;
+  transition: transform .8s cubic-bezier(.22,1,.36,1) .15s;
+}
+.eyebrow:is([data-revealed], [data-hero-item])::before,
+[data-revealed] .eyebrow::before { transform: scaleX(1); }
+
+/* ------------------------------- inputs -------------------------------- */
+input, select, textarea { transition: border-color .3s ease, box-shadow .3s ease, background .3s ease; }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--text); box-shadow: 0 0 0 3px rgba(255,255,255,.09);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+
+/* ------------------------------- footer -------------------------------- */
+.footer-grid a { position: relative; width: fit-content; transition: transform .32s cubic-bezier(.22,1,.36,1), color .3s ease; }
+.footer-grid a::before {
+  content: "→"; position: absolute; left: -18px; opacity: 0;
+  transition: opacity .3s ease, transform .32s cubic-bezier(.22,1,.36,1);
+  transform: translateX(-4px);
+}
+.footer-grid a:hover { transform: translateX(18px); }
+.footer-grid a:hover::before { opacity: 1; transform: translateX(0); }
+
+/* ------------------------------ marquee -------------------------------- */
+.marquee-track span { transition: color .3s ease, transform .4s cubic-bezier(.22,1,.36,1); }
+.marquee-track span:hover { transform: scale(1.14); }
+
+/* -------------------------- scroll progress ---------------------------- */
+/* Width is set by JS via --sp; the bar simply never moves without it. */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 100%; z-index: 200;
+  transform: scaleX(var(--sp, 0)); transform-origin: left;
+  background: var(--text); pointer-events: none;
+}
+
+/* ------------------------- car thumb mask reveal ----------------------- */
+.car-card[data-revealed] .car-thumb img { animation: thumb-mask .9s cubic-bezier(.22,1,.36,1) both; }
+@keyframes thumb-mask {
+  from { clip-path: inset(0 0 100% 0); transform: scale(1.12); }
+  to   { clip-path: inset(0 0 0 0);    transform: scale(1); }
+}
+
+/* ------------------------------ card tilt ------------------------------ */
+/* JS writes --rx/--ry; without it the card simply sits flat. */
+.tilt { transform-style: preserve-3d; }
+.tilt.is-tilting {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-8px);
+  transition: transform .12s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid-3 .card, .grid-3 .card:hover, .footer-grid a:hover,
+  .marquee-track span:hover, .tilt.is-tilting { transform: none; }
+  .grid-3 .card::before, .grid-3 .card::after, .eyebrow::before { display: none; }
+  .section-head::after { transform: scaleX(1); transition: none; }
+  .marquee-track { animation: none; }
+  .car-card[data-revealed] .car-thumb img { animation: none; }
+}
