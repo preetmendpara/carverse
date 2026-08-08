@@ -12,13 +12,17 @@ import { fallbackCars } from "../data/fallback-cars.js";
 
   if (settings.heroTitle) document.getElementById("hero-title").textContent = settings.heroTitle;
   if (settings.heroSubtitle) document.getElementById("hero-sub").textContent = settings.heroSubtitle;
-  // Word strip running behind the hero car.
+  // Word strip running behind the hero car. Clicking the strip itself toggles
+  // it; clicks anywhere else on the page leave it running.
   const strip = document.getElementById("stage-strip");
   if (strip) {
     const words = ["Certified", "360° Walkaround", "Verified Specs", "AI Assistant", "Inspected"];
     strip.innerHTML = [...words, ...words]
       .map((w) => `<span>${esc(w)}</span><span class="dot">•</span>`)
       .join("");
+
+    const box = document.getElementById("stage-strip-box");
+    box?.addEventListener("click", () => box.classList.toggle("is-paused"));
   }
 
   document.getElementById("hero-search").addEventListener("submit", (e) => {
@@ -35,14 +39,9 @@ import { fallbackCars } from "../data/fallback-cars.js";
   const cars = dbCars.length ? dbCars : fallbackCars();
   const brands = dbBrands.length ? dbBrands : fallbackBrands();
 
-  // Hero stage: the live inventory count sits behind the car, and the car is
-  // the configured banner if there is one, otherwise the first featured photo.
-  const stageType = document.getElementById("stage-type");
-  if (stageType) stageType.textContent = String(cars.length || 120);
-
   // Only an image chosen for this slot goes on the stage. Falling back to a
   // listing photo drops a full showroom scene — crowd, ceiling, signage —
-  // on top of the type; type and strip alone read as deliberate.
+  // behind the strip.
   const stageCar = document.getElementById("hero-banner");
   if (stageCar && settings.bannerUrl) {
     stageCar.innerHTML = `<img src="${esc(settings.bannerUrl)}" alt="" fetchpriority="high">`;

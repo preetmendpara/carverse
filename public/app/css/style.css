@@ -627,27 +627,17 @@ input, select, textarea { border-radius: 0; }
   overflow: hidden;
 }
 
-/* The number sits behind everything, cropped by the stage on purpose. */
-.stage-type {
-  position: absolute; z-index: 1; user-select: none;
-  font-family: var(--display); font-weight: 400;
-  font-size: clamp(200px, 36vw, 520px); line-height: .78;
-  letter-spacing: -.02em; color: var(--text);
-  /* Fades out toward the base so the type reads as lighting, not a block. */
-  -webkit-mask-image: linear-gradient(180deg, #000 55%, rgba(0,0,0,.35) 100%);
-          mask-image: linear-gradient(180deg, #000 55%, rgba(0,0,0,.35) 100%);
-}
-
-/* Word strip: above the type, below the car — the car interrupts it. */
+/* Word strip sits behind the car, which interrupts it as it passes. */
 .stage-strip {
   position: absolute; z-index: 2; left: 0; right: 0; top: 50%;
   transform: translateY(-50%); overflow: hidden;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
           mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
+.stage-strip { cursor: pointer; }
 .strip-track {
   display: flex; align-items: center; gap: 34px; width: max-content;
-  animation: marquee 30s linear infinite;
+  animation: marquee 16s linear infinite;
 }
 .strip-track span {
   font-size: clamp(20px, 2.6vw, 34px); font-weight: 700;
@@ -655,7 +645,9 @@ input, select, textarea { border-radius: 0; }
   color: var(--text);
 }
 .strip-track .dot { font-size: 18px; opacity: .5; }
-.hero-stage:hover .strip-track { animation-play-state: paused; }
+/* Click the strip to hold it — hovering anywhere over the stage used to stop
+   it, which made the pause feel like it fired on unrelated cursor movement. */
+.stage-strip.is-paused .strip-track { animation-play-state: paused; }
 
 /* The car itself. The radial mask melts a rectangular photo into the black
    background, so an ordinary listing photo works — no cut-out PNG needed. */
