@@ -273,7 +273,13 @@ h2 { font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1; }
   background-repeat: no-repeat;
   background-size: 100% 200%;
   background-position: 0 -100%;
-  transition: color .32s ease, border-color .3s ease, background-position .42s cubic-bezier(.22,1,.36,1),
+  /* The label and its fill must land together. They ran at .32s and .42s, so
+     mid-hover the text had already turned dark while the light fill was still
+     climbing, and the label disappeared into the button. Delaying the colour
+     only moves the problem — a full-coverage sweep is ambiguous whenever the
+     two are out of step — so both are short and matched instead. */
+  transition: color .16s ease, border-color .2s ease,
+              background-position .2s cubic-bezier(.22,1,.36,1),
               transform .18s cubic-bezier(.22,1,.36,1);
 }
 .btn:hover { color: var(--bg); border-color: var(--text); background-position: 0 0; }
@@ -397,10 +403,13 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
 
 /* Magnetic pull: JS writes --mx/--my, CSS owns the easing so the spring
    still feels right if the script never runs. */
+/* Must repeat .btn's colour/fill timing — this rule sits later with equal
+   specificity, so otherwise it reinstates the mismatch on every magnetic
+   (primary) button. */
 .btn[data-magnetic] {
   transform: translate(var(--mx, 0px), var(--my, 0px));
-  transition: transform .28s cubic-bezier(.22,1,.36,1), color .32s ease,
-              border-color .3s ease, background-position .42s cubic-bezier(.22,1,.36,1);
+  transition: transform .28s cubic-bezier(.22,1,.36,1), color .16s ease,
+              border-color .2s ease, background-position .2s cubic-bezier(.22,1,.36,1);
 }
 .btn[data-magnetic].is-pulling { transition: transform .08s linear; }
 .btn[data-magnetic].is-pressed { transform: translate(var(--mx, 0px), var(--my, 0px)) scale(.96); }
