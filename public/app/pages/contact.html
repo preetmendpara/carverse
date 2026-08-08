@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact Us & Car Enquiries | %SITE%</title>
+  <meta name="description" content="Send an enquiry about any car in our inventory — our team replies with pricing, finance and availability details.">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="site-header" class="site-header">
+    <div class="container nav">
+      <a class="brand" href="../index.html"><span>CarVerse</span></a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">Menu</button>
+      <nav class="nav-links" id="nav-links"><a href="../index.html">Home</a><a href="../pages/cars.html">Cars</a><a href="../pages/brands.html">Brands</a><a href="../pages/compare.html">Compare</a><a href="../pages/wishlist.html">Wishlist</a><a href="../pages/contact.html" class="active">Contact</a><a href="../pages/admin-login.html">Admin</a></nav>
+    </div>
+  </header>
+  <main class="section">
+    <div class="container">
+      <div class="section-head" data-reveal><h1 style="font-size:2rem">Contact</h1></div>
+      <div class="grid-2">
+        <form class="card card-pad" id="form">
+          <div class="field"><label for="name">Name</label><input id="name" required maxlength="100"></div>
+          <div class="field"><label for="email">Email</label><input id="email" type="email" required maxlength="255"></div>
+          <div class="field"><label for="phone">Phone</label><input id="phone" required maxlength="20"></div>
+          <div class="field"><label for="car">Selected car</label><select id="car"><option value="">General enquiry</option></select></div>
+          <div class="field"><label for="message">Message</label><textarea id="message" required maxlength="1000"></textarea></div>
+          <button class="btn btn-primary btn-block" type="submit" id="submit">Send enquiry</button>
+          <p class="small" id="status" style="margin-top:12px"></p>
+        </form>
+        <div class="card card-pad" id="info"></div>
+      </div>
+    </div>
+  </main>
+  <footer id="site-footer" class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div><div class="brand" style="margin-bottom:10px">CarVerse</div><p class="small">A minimal, data-driven car marketplace.</p></div>
+        <div><h4>Explore</h4><a href="../index.html">Home</a><a href="../pages/cars.html">Cars</a><a href="../pages/brands.html">Brands</a><a href="../pages/compare.html">Compare</a><a href="../pages/wishlist.html">Wishlist</a><a href="../pages/contact.html">Contact</a></div>
+        <div><h4>Contact</h4></div>
+      </div>
+      <div class="footer-bottom"><span>&copy; 2026 CarVerse. All rights reserved.</span><span>GTU Minor Project</span></div>
+    </div>
+  </footer>
+  <script type="module" src="../js/pages/contact.js"></script>
+</body>
+</html>

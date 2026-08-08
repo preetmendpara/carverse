@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>All Cars — Search, Filter & Compare | %SITE%</title>
+  <meta name="description" content="Search the full inventory by brand, fuel type and transmission, sort by price or year, and shortlist cars for comparison.">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="site-header" class="site-header">
+    <div class="container nav">
+      <a class="brand" href="../index.html"><span>CarVerse</span></a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">Menu</button>
+      <nav class="nav-links" id="nav-links"><a href="../index.html">Home</a><a href="../pages/cars.html" class="active">Cars</a><a href="../pages/brands.html">Brands</a><a href="../pages/compare.html">Compare</a><a href="../pages/wishlist.html">Wishlist</a><a href="../pages/contact.html">Contact</a><a href="../pages/admin-login.html">Admin</a></nav>
+    </div>
+  </header>
+  <main class="section">
+    <div class="container">
+      <div class="section-head" data-reveal><h1 style="font-size:2rem">Cars</h1><span class="muted small" id="count"></span></div>
+      <div class="filters">
+        <input id="f-q" placeholder="Search model, brand, variant…">
+        <select id="f-brand"><option value="">All brands</option></select>
+        <select id="f-fuel"><option value="">All fuel types</option></select>
+        <select id="f-trans"><option value="">All transmissions</option></select>
+        <select id="f-price"><option value="">Any price</option></select>
+        <select id="f-avail"><option value="">Any availability</option></select>
+        <select id="f-sort">
+          <option value="new">Newest first</option>
+          <option value="price-asc">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="year-desc">Year: newest</option>
+        </select>
+      </div>
+      <div class="cars-grid" id="grid"></div>
+    </div>
+  </main>
+  <footer id="site-footer" class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div><div class="brand" style="margin-bottom:10px">CarVerse</div><p class="small">A minimal, data-driven car marketplace.</p></div>
+        <div><h4>Explore</h4><a href="../index.html">Home</a><a href="../pages/cars.html">Cars</a><a href="../pages/brands.html">Brands</a><a href="../pages/compare.html">Compare</a><a href="../pages/wishlist.html">Wishlist</a><a href="../pages/contact.html">Contact</a></div>
+        <div><h4>Contact</h4></div>
+      </div>
+      <div class="footer-bottom"><span>&copy; 2026 CarVerse. All rights reserved.</span><span>GTU Minor Project</span></div>
+    </div>
+  </footer>
+  <script type="module" src="../js/pages/cars.js"></script>
+</body>
+</html>

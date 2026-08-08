@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard</title>
+  <meta name="description" content="Manage brands, cars, media, 3D models, enquiries, AI chats and site settings.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="admin-side">
+      <div class="brand">Admin</div>
+      <nav class="admin-nav" id="admin-nav">
+        <a href="#dashboard">Dashboard</a>
+        <a href="#brands">Brands</a>
+        <a href="#cars">Cars</a>
+        <a href="#customers">Customers</a>
+        <a href="#chats">AI Chats</a>
+        <a href="#settings">Settings</a>
+        <a href="../index.html">View website</a>
+        <a href="#" id="logout">Logout</a>
+      </nav>
+    </aside>
+    <main class="admin-main" id="view">
+      <p class="muted">Loading…</p>
+    </main>
+  </div>
+  <div class="modal-back" id="modal-back"><div class="card card-pad modal" id="modal"></div></div>
+  <script type="module" src="../js/pages/admin.js"></script>
+</body>
+</html>

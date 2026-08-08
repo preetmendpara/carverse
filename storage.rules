@@ -1,0 +1,25 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.uid == 'U95gwk62Ale4kPfCNSAlUQ7TQcq2'
+            || firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Public media folders: anyone can view, only admins can upload or delete.
+    match /{folder}/{allPaths=**} {
+      allow read: if folder in [
+        'brand-logos', 'car-images', 'car-gallery',
+        'car-interior', 'car-exterior', '3d-models', 'thumbnails'
+      ];
+      allow write: if isAdmin()
+        && folder in [
+          'brand-logos', 'car-images', 'car-gallery',
+          'car-interior', 'car-exterior', '3d-models', 'thumbnails'
+        ]
+        && request.resource.size < 60 * 1024 * 1024;
+    }
+  }
+}

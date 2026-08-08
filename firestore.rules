@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.uid == 'U95gwk62Ale4kPfCNSAlUQ7TQcq2'
+            || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Admin registry: readable by signed-in users (needed for the guard), writable only server-side/console.
+    match /admins/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Public catalogue data — read by anyone, written only by admins.
+    match /brands/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /cars/{id}     { allow read: if true; allow write: if isAdmin(); }
+    match /carImages/{id}      { allow read: if true; allow write: if isAdmin(); }
+    match /carModels/{id}      { allow read: if true; allow write: if isAdmin(); }
+    match /specifications/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /features/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /settings/{id}       { allow read: if true; allow write: if isAdmin(); }
+
+    // Visitor-owned shortlists: created and removed by the visitor that owns them.
+    match /wishlist/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.visitorId is string
+                    && request.resource.data.carId is string;
+      allow delete: if true;
+      allow update: if isAdmin();
+    }
+    match /compare/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.visitorId is string
+                    && request.resource.data.carId is string;
+      allow delete: if true;
+      allow update: if isAdmin();
+    }
+
+    // Visitors may submit enquiries; only admins can read, edit or delete them.
+    match /customerInquiries/{id} {
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 100
+                    && request.resource.data.email is string
+                    && request.resource.data.email.size() <= 255
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() <= 1000
+                    && request.resource.data.status == 'new';
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Chatbot transcripts: visitors can log them, only admins can read/manage.
+    match /chatHistory/{id} {
+      allow create: if request.resource.data.question is string
+                    && request.resource.data.question.size() <= 2000;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
