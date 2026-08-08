@@ -14,7 +14,13 @@ export function carCard(car, base = "") {
   return `
   <article class="card car-card" data-car="${esc(car.id)}">
     <a class="car-thumb" href="${base}pages/car-details.html?id=${encodeURIComponent(car.id)}">
-      ${img ? `<img src="${esc(img)}" alt="${esc(carTitle(car))}" loading="lazy">` : `<div class="ph">NO IMAGE</div>`}
+      ${
+        img
+          ? // width/height give the browser the 16:10 ratio before the file
+            // arrives, so the grid does not jolt as thumbnails load.
+            `<img src="${esc(img)}" alt="${esc(carTitle(car))}" loading="lazy" decoding="async" width="640" height="400">`
+          : `<div class="ph">NO IMAGE</div>`
+      }
     </a>
     <div class="car-body">
       <div class="car-brand">${esc(car.brandName || "")}</div>

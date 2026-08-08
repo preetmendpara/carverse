@@ -58,7 +58,11 @@ import { fallbackCars } from "../data/fallback-cars.js";
     ? show
         .map(
           (b) => `<a class="card brand-card" href="pages/cars.html?brand=${encodeURIComponent(b.id)}">
-        ${brandLogo(b) ? `<img src="${esc(brandLogo(b))}" alt="${esc(b.name)} logo" loading="lazy">` : `<div class="logo-ph">${esc((b.name || "?")[0])}</div>`}
+        ${
+          brandLogo(b)
+            ? `<img src="${esc(brandLogo(b))}" alt="${esc(b.name)} logo" loading="lazy" decoding="async" width="120" height="40">`
+            : `<div class="logo-ph">${esc((b.name || "?")[0])}</div>`
+        }
         <div>${esc(b.name || "")}</div>
         <div class="small muted">${esc(b.country || "")}</div>
       </a>`

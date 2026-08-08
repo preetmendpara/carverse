@@ -8,6 +8,12 @@
   <link rel="icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Both are render-critical and discovered late: the wordmark font sits in
+       a stylesheet, the hero car behind a <picture> inside the layout. -->
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="assets/fonts/vengeance-at-sea.woff2">
+  <link rel="preload" as="image" type="image/webp" fetchpriority="high"
+        href="assets/hero-car.webp">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Great+Vibes&family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('carverse-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}catch(e){}</script>
   <link rel="stylesheet" href="css/style.css">
@@ -18,6 +24,7 @@
       <a class="brand" href="index.html"><span>CarVerse</span></a>
       <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">Menu</button>
       <nav class="nav-links" id="nav-links"><a href="index.html" class="active">Home</a><a href="pages/cars.html">Cars</a><a href="pages/brands.html">Brands</a><a href="pages/compare.html">Compare</a><a href="pages/wishlist.html">Wishlist</a><a href="pages/contact.html">Contact</a><a href="pages/admin-login.html">Admin</a></nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch between dark and light mode" title="Switch theme"><span class="icon-moon" aria-hidden="true">☾</span><span class="icon-sun" aria-hidden="true">☀</span></button>
     </div>
   </header>
 
@@ -37,7 +44,10 @@
           <div class="hero-stage" data-hero-item>
             <div class="stage-strip" id="stage-strip-box" aria-hidden="true"><div class="strip-track" id="stage-strip"></div></div>
             <div class="stage-car" id="hero-banner" data-parallax>
-              <img src="assets/hero-car.png" alt="" fetchpriority="high" width="408" height="612">
+              <picture>
+                <source srcset="assets/hero-car.webp" type="image/webp">
+                <img src="assets/hero-car.png" alt="" fetchpriority="high" width="408" height="612">
+              </picture>
             </div>
           </div>
         </div>

@@ -61,15 +61,22 @@ const themeButton = () =>
      <span class="icon-moon" aria-hidden="true">☾</span><span class="icon-sun" aria-hidden="true">☀</span>
    </button>`;
 
-/** Adds the toggle to the header shell that ships in each page's HTML.
- *  renderLayout only repaints the header when Firestore settings override
- *  something, so the button cannot rely on that repaint to exist. */
+/** Wires the toggle that ships in each page's header markup.
+ *  It must be in the HTML rather than injected: the nav is a space-between
+ *  row, so adding a fourth child after paint redistributed the links and the
+ *  whole menu visibly slid across. Inserting it here is only a fallback for
+ *  a page whose markup predates this. */
 export function mountThemeToggle() {
-  if (document.getElementById("theme-toggle")) return;
-  const nav = document.querySelector(".site-header .nav");
-  if (!nav) return;
-  nav.insertAdjacentHTML("beforeend", themeButton());
-  document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
+  let btn = document.getElementById("theme-toggle");
+  if (!btn) {
+    const nav = document.querySelector(".site-header .nav");
+    if (!nav) return;
+    nav.insertAdjacentHTML("beforeend", themeButton());
+    btn = document.getElementById("theme-toggle");
+  }
+  if (btn.dataset.wired) return;
+  btn.dataset.wired = "1";
+  btn.addEventListener("click", toggleTheme);
 }
 
 // `base` is the relative path back to /app (e.g. "" for index, "../" for pages)
