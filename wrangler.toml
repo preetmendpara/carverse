@@ -1,0 +1,8 @@
+# Root config for Cloudflare Workers static-assets deploy (`wrangler deploy`).
+# The Pages-style config in deploy/cloudflare/ is kept for `wrangler pages deploy`.
+name = "carverse"
+compatibility_date = "2026-01-01"
+
+[assets]
+directory = "./public"
+not_found_handling = "404-page"
