@@ -15,7 +15,8 @@ export const firebaseConfig = {
   measurementId: "G-515S2LDN63",
 };
 
-export const GEMINI_API_KEY = "AQ.Ab8RN6Iy7gc4aBxb4lBZAdMQPrj7aa_3cbAga08ZF7MHiiegiA";
-export const GEMINI_MODEL = "gemini-2.5-flash";
+export const GEMINI_API_KEY = "REMOVED-old-key-revoked";
+// "-latest" alias so the chatbot survives model retirements.
+export const GEMINI_MODEL = "gemini-flash-latest";
 // UIDs granted admin access without needing an `admins` Firestore doc.
 export const ADMIN_UIDS = ["U95gwk62Ale4kPfCNSAlUQ7TQcq2"];
