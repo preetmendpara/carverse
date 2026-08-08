@@ -1,5 +1,5 @@
 import { renderLayout, esc } from "../../components/layout.js";
-import { renderCars, carCover } from "../../components/car-card.js";
+import { renderCars } from "../../components/car-card.js";
 import { listCars, listBrands } from "../core/store.js";
 import { mountChatbot } from "../features/chatbot.js";
 import { revealGrid, refreshMotionFx } from "../features/motion-fx.js";
@@ -40,10 +40,12 @@ import { fallbackCars } from "../data/fallback-cars.js";
   const stageType = document.getElementById("stage-type");
   if (stageType) stageType.textContent = String(cars.length || 120);
 
+  // Only an image chosen for this slot goes on the stage. Falling back to a
+  // listing photo drops a full showroom scene — crowd, ceiling, signage —
+  // on top of the type; type and strip alone read as deliberate.
   const stageCar = document.getElementById("hero-banner");
-  const heroImage = settings.bannerUrl || carCover(cars.find((c) => c.featured) || cars[0] || {});
-  if (stageCar && heroImage) {
-    stageCar.innerHTML = `<img src="${esc(heroImage)}" alt="" fetchpriority="high">`;
+  if (stageCar && settings.bannerUrl) {
+    stageCar.innerHTML = `<img src="${esc(settings.bannerUrl)}" alt="" fetchpriority="high">`;
   }
 
   const featured = cars.filter((c) => c.featured);
