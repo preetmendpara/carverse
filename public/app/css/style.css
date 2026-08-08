@@ -639,12 +639,15 @@ input, select, textarea { border-radius: 0; }
   display: flex; align-items: center; gap: 34px; width: max-content;
   animation: marquee 16s linear infinite;
 }
+/* Bebas Neue rather than the body sans: condensed caps carry a wide strip
+   far better, and it's already loaded for the section headings. */
 .strip-track span {
-  font-size: clamp(20px, 2.6vw, 34px); font-weight: 700;
-  letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
-  color: var(--text);
+  font-family: var(--display);
+  font-size: clamp(28px, 3.6vw, 52px); font-weight: 400;
+  letter-spacing: .18em; text-transform: uppercase; white-space: nowrap;
+  color: var(--text); opacity: .92;
 }
-.strip-track .dot { font-size: 18px; opacity: .5; }
+.strip-track .dot { font-size: .5em; opacity: .45; letter-spacing: 0; }
 /* Click the strip to hold it — hovering anywhere over the stage used to stop
    it, which made the pause feel like it fired on unrelated cursor movement. */
 .stage-strip.is-paused .strip-track { animation-play-state: paused; }
