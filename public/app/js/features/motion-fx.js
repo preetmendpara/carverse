@@ -202,10 +202,9 @@ export function refreshMotionFx(container) {
 /* =====================================================================
    Scroll words — scroll-driven, word-by-word text illumination.
    Each [data-scroll-words] block is split into words; scroll progress
-   through the block lights them up sequentially (Framer Motion `scroll`
-   when available, otherwise a passive scroll listener).
+   through the block's sticky pin lights them up sequentially.
    ===================================================================== */
-export async function scrollWords(root = document) {
+export function scrollWords(root = document) {
   const blocks = [...root.querySelectorAll("[data-scroll-words]:not([data-sw-ready])")];
   if (!blocks.length) return;
 
@@ -230,30 +229,20 @@ export async function scrollWords(root = document) {
     words.forEach((w, i) => w.classList.toggle("is-lit", i < lit));
   };
 
-  const m = await lib();
-  if (m?.scroll) {
-    blocks.forEach((el) => {
-      const target = el.closest("[data-scroll-stage]") || el;
-      // start start → end end maps progress onto the sticky pin travel only,
-      // which is proportional to the stage height at every breakpoint.
-      m.scroll((progress) => paint(el, progress), { target, offset: ["start start", "end end"] });
-    });
-    return;
-  }
-
+  // One code path, driven by the scroll event itself. The library's `scroll()`
+  // was the only path ever taken, leaving this branch dead and untested — and
+  // painting straight from the event keeps the effect verifiable.
+  // Progress is measured against the sticky pin travel, so it stays correct
+  // at every viewport size.
   const stages = blocks.map((el) => ({ el, target: el.closest("[data-scroll-stage]") || el }));
-  let frame = 0;
+
   const onScroll = () => {
-    if (frame) return;
-    frame = requestAnimationFrame(() => {
-      frame = 0;
-      stages.forEach(({ el, target }) => {
-        const r = target.getBoundingClientRect();
-        const sticky = target.querySelector(".scroll-sticky");
-        const stickyH = sticky ? sticky.getBoundingClientRect().height : window.innerHeight;
-        const travel = Math.max(1, r.height - stickyH);
-        paint(el, -r.top / travel);
-      });
+    stages.forEach(({ el, target }) => {
+      const r = target.getBoundingClientRect();
+      const sticky = target.querySelector(".scroll-sticky");
+      const stickyH = sticky ? sticky.getBoundingClientRect().height : window.innerHeight;
+      const travel = Math.max(1, r.height - stickyH);
+      paint(el, -r.top / travel);
     });
   };
   onScroll();
