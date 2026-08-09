@@ -2,7 +2,7 @@
 # Uses a fresh port each run so the browser can't serve a stale CSS/JS bundle.
 param([int]$Port = 0)
 
-Set-Location $PSScriptRoot
+Set-Location (Split-Path $PSScriptRoot -Parent)   # repo root, one level up
 
 if ($Port -eq 0) { $Port = Get-Random -Minimum 8100 -Maximum 8999 }
 
