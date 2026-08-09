@@ -910,7 +910,8 @@ input, select, textarea { border-radius: 0; }
 .nav-toggle .bars,
 .nav-toggle .bars::before,
 .nav-toggle .bars::after {
-  display: block; width: 20px; height: 2px; background: currentColor;
+  display: block; width: 22px; height: 2px; background: currentColor;
+  border-radius: 2px;
   transition: transform .28s cubic-bezier(.22,1,.36,1), opacity .18s ease;
 }
 .nav-toggle .bars { position: relative; }
