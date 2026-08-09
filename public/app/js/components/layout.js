@@ -61,6 +61,25 @@ const themeButton = () =>
      <span class="icon-moon" aria-hidden="true">☾</span><span class="icon-sun" aria-hidden="true">☀</span>
    </button>`;
 
+/** Opens and closes the mobile menu, keeping aria-expanded in step — the
+ *  hamburger draws its open state from that attribute. */
+function wireNavToggle() {
+  const btn = document.getElementById("nav-toggle");
+  const links = document.getElementById("nav-links");
+  if (!btn || !links || btn.dataset.wired) return;
+  btn.dataset.wired = "1";
+  btn.addEventListener("click", () => {
+    const open = links.classList.toggle("open");
+    btn.setAttribute("aria-expanded", String(open));
+  });
+  // A tap on a link should close the panel behind it.
+  links.addEventListener("click", (e) => {
+    if (!e.target.closest("a")) return;
+    links.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+  });
+}
+
 /** Wires the toggle that ships in each page's header markup.
  *  It must be in the HTML rather than injected: the nav is a space-between
  *  row, so adding a fourth child after paint redistributed the links and the
@@ -107,7 +126,7 @@ export async function renderLayout({ base = "", active = "" } = {}) {
           ${s.logoUrl ? `<img src="${esc(s.logoUrl)}" alt="${esc(name)} logo">` : ""}
           <span>${esc(name)}</span>
         </a>
-        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">Menu</button>
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><span class="bars" aria-hidden="true"></span></button>
         <nav class="nav-links" id="nav-links">
           ${NAV.map(
             ([href, label]) =>
@@ -118,9 +137,7 @@ export async function renderLayout({ base = "", active = "" } = {}) {
         </nav>
         ${themeButton()}
       </div>`;
-      document
-        .getElementById("nav-toggle")
-        ?.addEventListener("click", () => document.getElementById("nav-links").classList.toggle("open"));
+      wireNavToggle();
       document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
     }
 
@@ -163,9 +180,7 @@ export async function renderLayout({ base = "", active = "" } = {}) {
   // The header/footer shell is already in the page HTML, so it paints with the
   // first frame. Only wire the menu button and repaint if Firestore settings
   // actually override something — that avoids a visible second render.
-  document
-    .getElementById("nav-toggle")
-    ?.addEventListener("click", () => document.getElementById("nav-links")?.classList.toggle("open"));
+  wireNavToggle();
   mountThemeToggle();
   if (document.title.includes("%SITE%")) document.title = document.title.replace("%SITE%", "CarVerse");
 

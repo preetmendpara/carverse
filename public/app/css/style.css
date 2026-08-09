@@ -899,3 +899,47 @@ input, select, textarea { border-radius: 0; }
   .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section { padding: 40px 0; }
 }
+
+/* =====================================================================
+   Mobile header — hamburger, and a header row that keeps its shape.
+   ===================================================================== */
+
+/* Three bars drawn from one element: the middle is the element itself, the
+   outer two are its pseudo-elements. They fold into an X when the menu opens. */
+.nav-toggle { padding: 0; display: none; place-items: center; border-radius: 0; }
+.nav-toggle .bars,
+.nav-toggle .bars::before,
+.nav-toggle .bars::after {
+  display: block; width: 20px; height: 2px; background: currentColor;
+  transition: transform .28s cubic-bezier(.22,1,.36,1), opacity .18s ease;
+}
+.nav-toggle .bars { position: relative; }
+.nav-toggle .bars::before,
+.nav-toggle .bars::after { content: ""; position: absolute; left: 0; }
+.nav-toggle .bars::before { top: -6px; }
+.nav-toggle .bars::after  { top: 6px; }
+
+.nav-toggle[aria-expanded="true"] .bars { background: transparent; }
+.nav-toggle[aria-expanded="true"] .bars::before { transform: translateY(6px) rotate(45deg); }
+.nav-toggle[aria-expanded="true"] .bars::after  { transform: translateY(-6px) rotate(-45deg); }
+
+@media (max-width: 640px) {
+  /* The row is brand | hamburger | theme, with the menu panel dropping out of
+     flow beneath. space-between spread three items across the full width and
+     left the hamburger stranded in the middle of the header. */
+  .nav { justify-content: flex-start; gap: 12px; }
+  .brand { margin-right: auto; }
+  .nav-toggle { display: grid; order: 2; }
+  .theme-toggle { order: 3; }
+  .nav-links { order: 4; }
+
+  /* The panel is positioned against the header, not the nav row, so it spans
+     the full width regardless of where the button sits. */
+  .site-header { position: sticky; }
+  .nav-links { top: 100%; gap: 2px; }
+  .nav-links a { border-radius: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-toggle .bars, .nav-toggle .bars::before, .nav-toggle .bars::after { transition: none; }
+}

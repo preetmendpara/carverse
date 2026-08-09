@@ -1,5 +1,5 @@
 // Thin, reusable Firestore/Storage data layer. No hardcoded data anywhere.
-import { auth, db } from "../config/firebase.js";
+import { db } from "../config/firebase.js";
 import { ADMIN_UIDS } from "../config/config.js";
 import {
   collection,
@@ -240,6 +240,10 @@ export async function isAdmin(uid) {
 // which verifies the caller's Firebase ID token before writing anything.
 // Returns { url, path } exactly like the old Firebase Storage version.
 export async function uploadFile(folder, file) {
+  // Imported here rather than at module scope: this is the only place a
+  // signed-in user is needed, and loading Auth eagerly made every public
+  // page wait on Firebase's sign-in iframe.
+  const { auth } = await import("../config/auth.js");
   const user = auth.currentUser;
   if (!user) throw new Error("Sign in as an admin before uploading files.");
 

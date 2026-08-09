@@ -2,7 +2,7 @@
 // Admin dashboard: brands, cars, media, 3D models, inquiries, chats, settings.
 // Everything is stored in Firestore / Firebase Storage — no hardcoded data.
 // ---------------------------------------------------------------------------
-import { auth } from "../config/firebase.js";
+import { auth } from "../config/auth.js";
 import {
   onAuthStateChanged,
   signOut,

@@ -11,13 +11,24 @@
   <meta name="theme-color" content="#000000">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('carverse-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}catch(e){}</script>
+  <!-- The import graph is a waterfall otherwise: each module is
+       only discovered once its importer has parsed. -->
+  <link rel="modulepreload" href="js/features/demo-admin.js">
+  <link rel="modulepreload" href="js/config/config.js">
+  <link rel="modulepreload" href="js/core/store.js">
+  <link rel="modulepreload" href="js/config/firebase.js">
+  <link rel="modulepreload" href="js/config/auth.js">
+  <link rel="modulepreload" href="js/components/layout.js">
+  <link rel="modulepreload" href="js/features/motion-fx.js">
+  <link rel="modulepreload" href="js/features/motion.js">
+  <link rel="modulepreload" href="js/features/animate.js">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
   <header id="site-header" class="site-header">
     <div class="container nav">
       <a class="brand" href="../index.html"><span>CarVerse</span></a>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">Menu</button>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><span class="bars" aria-hidden="true"></span></button>
       <nav class="nav-links" id="nav-links"><a href="../index.html">Home</a><a href="../pages/cars.html">Cars</a><a href="../pages/brands.html">Brands</a><a href="../pages/compare.html">Compare</a><a href="../pages/wishlist.html">Wishlist</a><a href="../pages/contact.html">Contact</a><a href="../pages/admin-login.html" class="active">Admin</a></nav>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch between dark and light mode" title="Switch theme"><span class="icon-moon" aria-hidden="true">☾</span><span class="icon-sun" aria-hidden="true">☀</span></button>
     </div>
