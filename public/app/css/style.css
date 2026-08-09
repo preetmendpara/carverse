@@ -857,3 +857,45 @@ input, select, textarea { border-radius: 0; }
     -webkit-text-fill-color: currentColor; color: var(--text);
   }
 }
+
+/* =====================================================================
+   Device fixes — found by measuring real breakpoints (320 / 390 / 768).
+   ===================================================================== */
+
+/* Tablets had feature cards, the footer and detail columns stacked in a
+   single column from 900px down, wasting most of the width. Two columns
+   hold well to 620px; only below that does one column make sense. */
+@media (max-width: 900px) and (min-width: 620px) {
+  .grid-3, .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* Coarse pointers: controls were 33-38px tall, under the 44px a fingertip
+   needs. Only applied where the pointer is actually coarse, so the mouse
+   layout keeps its tighter proportions. */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 40px; padding: 9px 14px; }
+  .nav-toggle, .theme-toggle { min-height: 44px; min-width: 44px; }
+  .nav-links a { padding: 12px; }
+  .footer-grid a { padding: 11px 0; }
+  input, select, textarea { min-height: 44px; }
+  /* 16px stops iOS Safari zooming the page when a field takes focus. The
+     hero field sets its own size later in the cascade, so name it too. */
+  input, select, textarea, .hero-search input { font-size: 16px; }
+  .gallery-thumbs img { min-height: 56px; }
+}
+
+/* Landscape phones are short: a stage sized off viewport width leaves no
+   room for the copy above it. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .hero { padding-top: 16px; }
+  .hero-stage { height: clamp(160px, 30vh, 220px); }
+}
+
+/* The car is decoration; on small screens the copy and search matter more. */
+@media (max-width: 520px) {
+  .hero-stage { height: clamp(180px, 44vw, 240px); }
+  .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .section { padding: 40px 0; }
+}

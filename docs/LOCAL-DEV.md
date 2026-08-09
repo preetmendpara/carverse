@@ -27,7 +27,7 @@ so `http://localhost:8788/` correctly lands on `/app/`.
 
 ## Before the first run
 
-Fill in `public/app/firebase/config.js`:
+Fill in `public/app/js/config/config.js`:
 
 - `firebaseConfig` — from Firebase console → Project settings → Your apps → Web app
 - `ADMIN_UIDS` — the UID(s) allowed into the admin dashboard

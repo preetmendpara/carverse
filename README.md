@@ -1,29 +1,32 @@
-# Welcome to your Lovable project
+# CarVerse
 
-This project was built with [Lovable](https://lovable.dev).
+A car marketplace with verified listings, 3D walkarounds and an AI assistant
+that answers from live inventory. Static frontend, Cloudflare Worker backend,
+Firestore database. No build step.
 
-## Build with Lovable
+## Run it
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+```bash
+.\serve.bat      # local preview, opens a browser
+.\deploy.bat     # deploy to Cloudflare
 ```
 
-## Built with
+## Layout
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+| Path       | What                                                        |
+| ---------- | ----------------------------------------------------------- |
+| `public/`  | Frontend, and the exact artifact that gets deployed          |
+| `server/`  | Cloudflare Worker (`/api/upload`, `/media/*`) and DB rules   |
+| `scripts/` | Serve and deploy scripts                                     |
+| `docs/`    | Structure, local development, deployment                     |
+
+Full map: [docs/STRUCTURE.md](docs/STRUCTURE.md)
+
+## Configuration
+
+Keys live in one file: `public/app/js/config/config.js` (Firebase web config,
+Gemini API key, admin UIDs). The Worker's own vars are in `wrangler.toml`.
+
+## Stack
+
+Vanilla ES modules · Firestore · Cloudflare Workers + R2 · Gemini · Three.js

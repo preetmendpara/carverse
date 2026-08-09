@@ -6,4 +6,4 @@ Static HTML/CSS/JS site. See the docs at the repo root:
 - `docs/LOCAL-DEV.md` — run on localhost (Live Server / wrangler pages dev)
 - `docs/DEPLOY-CLOUDFLARE.md` — deploy to Cloudflare Pages (output dir: `public`)
 
-Edit keys in `firebase/config.js` only.
+Edit keys in `js/config/config.js` only.

@@ -22,7 +22,7 @@ wrangler login
 wrangler pages deploy public --project-name carverse
 ```
 
-A ready config lives at `deploy/cloudflare/wrangler.toml`.
+Config lives at `wrangler.toml`; the Worker itself is `server/worker.js`.
 
 ## Post-deploy checklist
 

@@ -37,3 +37,15 @@
   .admin-side { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
   .admin-nav { flex-direction: row; flex-wrap: wrap; }
 }
+/* Admin tables carry five or six columns; below roughly 620px they are wider
+   than the screen. display:block lets the table scroll on its own instead of
+   dragging the whole page sideways. */
+@media (max-width: 620px) {
+  .admin-main .table { display: block; overflow-x: auto; max-width: 100%; }
+  .admin-main .table thead, .admin-main .table tbody { display: table; width: 100%; min-width: 520px; }
+  .admin-head { flex-direction: column; align-items: flex-start; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modal { max-width: 100%; }
+  .modal-back { padding: 16px 10px; }
+  .kv-row { grid-template-columns: 1fr; }
+}
