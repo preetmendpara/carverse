@@ -135,7 +135,10 @@ export function parallax() {
     const p = Math.min(1, Math.max(0, 1 - centre / (window.innerHeight || 1)));
     // Scale only — fading the car made it translucent, so the word strip
     // behind it showed straight through the bodywork.
-    el.style.transform = `translateY(${(-p * 40).toFixed(1)}px) scale(${(0.94 + p * 0.12).toFixed(3)})`;
+    // The stage clips its overflow, so the travel has to stay inside the
+    // headroom .stage-car reserves; at 1.06 and -40px the car grew past the
+    // frame and the top of it was sliced off on scroll.
+    el.style.transform = `translateY(${(-p * 16).toFixed(1)}px) scale(${(0.94 + p * 0.06).toFixed(3)})`;
   };
 
   // Written straight from the event: one transform on one element is cheap,
