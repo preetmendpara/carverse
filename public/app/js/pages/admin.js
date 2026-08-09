@@ -2,13 +2,13 @@
 // Admin dashboard: brands, cars, media, 3D models, inquiries, chats, settings.
 // Everything is stored in Firestore / Firebase Storage — no hardcoded data.
 // ---------------------------------------------------------------------------
-import { auth } from "../../firebase/firebase.js";
+import { auth } from "../config/firebase.js";
 import {
   onAuthStateChanged,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { esc, money, toast, initTheme, toggleTheme } from "../../components/layout.js";
-import { carTitle } from "../../components/car-card.js";
+import { esc, money, toast, initTheme, toggleTheme } from "../components/layout.js";
+import { carTitle } from "../components/car-card.js";
 import * as store from "../core/store.js";
 import { matchesBrand } from "../core/catalog.js";
 import { initAnimations } from "../features/animate.js";

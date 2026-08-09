@@ -5,7 +5,7 @@
 // credentials are in firebase/config.js this file disables itself and the
 // normal Firebase Auth + `admins` collection guard is the only way in.
 // ---------------------------------------------------------------------------
-import { firebaseConfig } from "../../firebase/config.js";
+import { firebaseConfig } from "../config/config.js";
 
 export const DEMO_EMAIL = "admin@carverse.local";
 export const DEMO_PASSWORD = "carverse123";

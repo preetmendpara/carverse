@@ -1,5 +1,5 @@
-import { renderLayout, esc, money, toast } from "../../components/layout.js";
-import { carTitle } from "../../components/car-card.js";
+import { renderLayout, esc, money, toast } from "../components/layout.js";
+import { carTitle } from "../components/car-card.js";
 import { listCompare, removeCompare, getCar } from "../core/store.js";
 import { mountChatbot } from "../features/chatbot.js";
 

@@ -1,6 +1,6 @@
 // Thin, reusable Firestore/Storage data layer. No hardcoded data anywhere.
-import { auth, db } from "../../firebase/firebase.js";
-import { ADMIN_UIDS } from "../../firebase/config.js";
+import { auth, db } from "../config/firebase.js";
+import { ADMIN_UIDS } from "../config/config.js";
 import {
   collection,
   doc,

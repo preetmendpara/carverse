@@ -1,3 +1,3 @@
 @echo off
-powershell -ExecutionPolicy Bypass -File "%~dp0deploy.ps1" %*
+powershell -ExecutionPolicy Bypass -File "%~dp0scripts\deploy.ps1" %*
 pause

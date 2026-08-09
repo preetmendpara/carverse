@@ -1,8 +1,7 @@
 # Root config for Cloudflare Workers deploy (`wrangler deploy`).
-# The Pages-style config in deploy/cloudflare/ is kept for `wrangler pages deploy`.
 name = "carverse"
 compatibility_date = "2026-01-01"
-main = "worker.js"
+main = "server/worker.js"
 
 [assets]
 directory = "./public"

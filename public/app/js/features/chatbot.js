@@ -1,8 +1,8 @@
 // Gemini-powered assistant. Car knowledge always comes from Firestore.
-import { GEMINI_API_KEY, GEMINI_MODEL } from "../../firebase/config.js";
+import { GEMINI_API_KEY, GEMINI_MODEL } from "../config/config.js";
 import { saveChat, visitorId } from "../core/store.js";
 import { loadCatalog, availabilityLabel, availabilityOf } from "../core/catalog.js";
-import { esc } from "../../components/layout.js";
+import { esc } from "../components/layout.js";
 
 let context = null;
 const history = [];

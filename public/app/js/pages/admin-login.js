@@ -1,5 +1,5 @@
-import { renderLayout } from "../../components/layout.js";
-import { auth } from "../../firebase/firebase.js";
+import { renderLayout } from "../components/layout.js";
+import { auth } from "../config/firebase.js";
 import {
   signInWithEmailAndPassword,
   signOut,

@@ -1,4 +1,4 @@
-import { renderLayout, esc } from "../../components/layout.js";
+import { renderLayout, esc } from "../components/layout.js";
 import { mountChatbot } from "../features/chatbot.js";
 import { brandLogo } from "../data/brand-logos.js";
 import {

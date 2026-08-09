@@ -1,7 +1,7 @@
 // Reusable header/footer components + shared UI helpers.
-import { getSettings } from "../js/core/store.js";
-import { initAnimations } from "../js/features/animate.js";
-import { initMotionFx } from "../js/features/motion-fx.js";
+import { getSettings } from "../core/store.js";
+import { initAnimations } from "../features/animate.js";
+import { initMotionFx } from "../features/motion-fx.js";
 
 export const money = (n) =>
   n === undefined || n === null || n === "" || isNaN(Number(n))

@@ -1,6 +1,6 @@
 import { esc, money, toast } from "./layout.js";
-import { toggleWishlist, toggleCompare } from "../js/core/store.js";
-import { revealGrid, refreshMotionFx } from "../js/features/motion-fx.js";
+import { toggleWishlist, toggleCompare } from "../core/store.js";
+import { revealGrid, refreshMotionFx } from "../features/motion-fx.js";
 
 export const carTitle = (c) => [c.brandName, c.model, c.variant].filter(Boolean).join(" ");
 export const carCover = (c) => c.mainImage || (c.gallery && c.gallery[0]) || c.thumbnail || "";

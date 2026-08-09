@@ -11,9 +11,9 @@
     "cleanUrls": true
   },
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "server/rules/firestore.rules"
   },
   "storage": {
-    "rules": "storage.rules"
+    "rules": "server/rules/storage.rules"
   }
 }

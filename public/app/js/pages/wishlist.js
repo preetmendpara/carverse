@@ -1,5 +1,5 @@
-import { renderLayout } from "../../components/layout.js";
-import { renderCars } from "../../components/car-card.js";
+import { renderLayout } from "../components/layout.js";
+import { renderCars } from "../components/car-card.js";
 import { listWishlist, getCar } from "../core/store.js";
 import { mountChatbot } from "../features/chatbot.js";
 
