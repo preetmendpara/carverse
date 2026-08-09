@@ -4,8 +4,6 @@
  * back to the demo seed when the collections are still empty.
  */
 import { listCars, listBrands } from "./store.js";
-import { fallbackBrands } from "../data/brand-logos.js";
-import { fallbackCars } from "../data/fallback-cars.js";
 
 let cache = null;
 let cachedAt = 0;
@@ -14,8 +12,20 @@ const TTL = 60_000;
 export async function loadCatalog({ force = false } = {}) {
   if (!force && cache && Date.now() - cachedAt < TTL) return cache;
   const [dbCars, dbBrands] = await Promise.all([listCars(), listBrands()]);
-  const cars = (dbCars.length ? dbCars : fallbackCars()).map(normalizeCar);
-  const brands = dbBrands.length ? dbBrands : fallbackBrands();
+  // The demo seed carries a photo table for every model, so importing it
+  // eagerly loaded two sizeable modules on every page for a case that only
+  // arises before Firestore has any data.
+  let seedCars = dbCars, seedBrands = dbBrands;
+  if (!dbCars.length || !dbBrands.length) {
+    const [{ fallbackCars }, { fallbackBrands }] = await Promise.all([
+      import("../data/fallback-cars.js"),
+      import("../data/brand-logos.js"),
+    ]);
+    if (!dbCars.length) seedCars = fallbackCars();
+    if (!dbBrands.length) seedBrands = fallbackBrands();
+  }
+  const cars = seedCars.map(normalizeCar);
+  const brands = seedBrands;
   cache = { cars, brands, fromFirestore: dbCars.length > 0 };
   cachedAt = Date.now();
   return cache;

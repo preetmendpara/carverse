@@ -3,8 +3,7 @@ import { renderCars } from "../components/car-card.js";
 import { listCars, listBrands } from "../core/store.js";
 import { mountChatbot } from "../features/chatbot.js";
 import { revealGrid, refreshMotionFx } from "../features/motion-fx.js";
-import { brandLogo, fallbackBrands } from "../data/brand-logos.js";
-import { fallbackCars } from "../data/fallback-cars.js";
+import { brandLogo } from "../data/brand-logos.js";
 
 (async function init() {
   const settings = await renderLayout({ base: "", active: "Home" });
@@ -41,8 +40,18 @@ import { fallbackCars } from "../data/fallback-cars.js";
   });
 
   const [dbCars, dbBrands] = await Promise.all([listCars(), listBrands()]);
-  const cars = dbCars.length ? dbCars : fallbackCars();
-  const brands = dbBrands.length ? dbBrands : fallbackBrands();
+  // The demo data only matters when Firestore is empty, which is never true
+  // in production — loading it eagerly put two modules and their photo tables
+  // on the critical path of every visit.
+  let cars = dbCars, brands = dbBrands;
+  if (!cars.length || !brands.length) {
+    const [{ fallbackCars }, { fallbackBrands }] = await Promise.all([
+      import("../data/fallback-cars.js"),
+      import("../data/brand-logos.js"),
+    ]);
+    if (!cars.length) cars = fallbackCars();
+    if (!brands.length) brands = fallbackBrands();
+  }
 
   // Only an image chosen for this slot goes on the stage. Falling back to a
   // listing photo drops a full showroom scene — crowd, ceiling, signage —
