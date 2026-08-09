@@ -944,3 +944,31 @@ input, select, textarea { border-radius: 0; }
 @media (prefers-reduced-motion: reduce) {
   .nav-toggle .bars, .nav-toggle .bars::before, .nav-toggle .bars::after { transition: none; }
 }
+
+/* =====================================================================
+   Mobile fixes — artifacts and layout found on a real handset.
+   ===================================================================== */
+
+/* The wordmark is gradient-clipped text animating its background-position
+   inside a sticky, backdrop-filtered header. Mobile compositors mis-repaint
+   that combination while scrolling: letters were dropped and a smear was
+   left behind — "CARVERSE" rendered as "ERSE". Paint it as plain text on
+   touch devices; the shine is decoration, a legible wordmark is not. */
+@media (pointer: coarse), (max-width: 640px) {
+  .brand span, .admin-side .brand {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--text);
+    animation: none;
+  }
+  /* Blur on a sticky element is costly per frame on phones and is what the
+     wordmark was compositing against. */
+  .site-header { backdrop-filter: none; background: var(--bg); }
+}
+
+/* The floating chat button sat on top of the stats. Give the page a little
+   room at the end and shrink the button so it stops covering content. */
+@media (max-width: 640px) {
+  body { padding-bottom: 72px; }
+  #chat-fab { padding: 12px 16px; font-size: 11px; }
+}

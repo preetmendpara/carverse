@@ -33,7 +33,13 @@
 <body>
   <div class="admin-shell">
     <aside class="admin-side">
-      <div class="brand">Admin</div>
+      <div class="admin-brand-row">
+        <div class="brand">Admin</div>
+        <button class="theme-toggle" id="theme-toggle" type="button"
+                aria-label="Switch between dark and light mode" title="Switch theme">
+          <span class="icon-moon" aria-hidden="true">☾</span><span class="icon-sun" aria-hidden="true">☀</span>
+        </button>
+      </div>
       <nav class="admin-nav" id="admin-nav">
         <a href="#dashboard">Dashboard</a>
         <a href="#brands">Brands</a>
@@ -41,14 +47,11 @@
         <a href="#customers">Customers</a>
         <a href="#chats">AI Chats</a>
         <a href="#settings">Settings</a>
+      </nav>
+      <div class="admin-utils">
         <a href="../index.html">View website</a>
         <a href="#" id="logout">Logout</a>
-        <button class="theme-toggle" id="theme-toggle" type="button"
-                aria-label="Switch between dark and light mode" title="Switch theme"
-                style="margin-top:12px">
-          <span class="icon-moon" aria-hidden="true">☾</span><span class="icon-sun" aria-hidden="true">☀</span>
-        </button>
-      </nav>
+      </div>
     </aside>
     <main class="admin-main" id="view">
       <p class="muted">Loading…</p>

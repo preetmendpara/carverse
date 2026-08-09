@@ -21,8 +21,13 @@ import { fallbackCars } from "../data/fallback-cars.js";
       .map((w) => `<span>${esc(w)}</span><span class="dot">•</span>`)
       .join("");
 
+    // Click-to-pause is a mouse affordance. On a phone the strip spans the
+    // width behind the car, so a tap while scrolling silently froze it and
+    // the marquee looked broken.
     const box = document.getElementById("stage-strip-box");
-    box?.addEventListener("click", () => box.classList.toggle("is-paused"));
+    if (box && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      box.addEventListener("click", () => box.classList.toggle("is-paused"));
+    }
   }
 
   document.getElementById("hero-search").addEventListener("submit", (e) => {
