@@ -72,33 +72,82 @@ const safe = async (fn, fallback) => {
   }
 };
 
+/* -------------------------- catalogue cache ---------------------------- */
+// The cars collection is ~225KB and takes about a second to fetch, and every
+// page asks for the whole thing. Hold it for the tab's session so only the
+// first page load pays; writes clear it so the admin never sees stale rows.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function cacheRead(key) {
+  try {
+    const hit = JSON.parse(sessionStorage.getItem("cv:" + key) || "null");
+    return hit && Date.now() - hit.t < CACHE_TTL_MS ? hit.v : null;
+  } catch {
+    return null; // storage blocked, or a quota/parse failure — just refetch
+  }
+}
+function cacheWrite(key, value) {
+  try {
+    sessionStorage.setItem("cv:" + key, JSON.stringify({ t: Date.now(), v: value }));
+  } catch { /* over quota or blocked; caching is optional */ }
+}
+export function clearCatalogCache() {
+  try {
+    Object.keys(sessionStorage)
+      .filter((k) => k.startsWith("cv:"))
+      .forEach((k) => sessionStorage.removeItem(k));
+  } catch { /* storage blocked */ }
+}
+/** Runs a write, then invalidates the cached catalogue. */
+const bust = (promise) =>
+  Promise.resolve(promise).then((r) => {
+    clearCatalogCache();
+    return r;
+  });
+
+const cached = async (key, load, fallback) => {
+  const hit = cacheRead(key);
+  if (hit) return hit;
+  const value = await safe(load, fallback);
+  if (value && value !== fallback) cacheWrite(key, value);
+  return value;
+};
+
 /* ------------------------------- brands -------------------------------- */
 export async function listBrands({ featuredOnly = false } = {}) {
-  return safe(async () => {
-    const snap = await getDocs(collection(db, "brands"));
-    let items = snapList(snap);
-    if (featuredOnly) items = items.filter((b) => b.featured);
-    return items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-  }, []);
+  const items = await cached(
+    "brands",
+    async () => {
+      const snap = await getDocs(collection(db, "brands"));
+      return snapList(snap).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    },
+    []
+  );
+  return featuredOnly ? items.filter((b) => b.featured) : items;
 }
 export const getBrand = async (id) => {
   const s = await getDoc(doc(db, "brands", id));
   return s.exists() ? { id: s.id, ...s.data() } : null;
 };
 export const saveBrand = (data, id) =>
-  id
-    ? updateDoc(doc(db, "brands", id), { ...data, updatedAt: serverTimestamp() })
-    : addDoc(collection(db, "brands"), { ...data, createdAt: serverTimestamp() });
-export const deleteBrand = (id) => deleteDoc(doc(db, "brands", id));
+  bust(
+    id
+      ? updateDoc(doc(db, "brands", id), { ...data, updatedAt: serverTimestamp() })
+      : addDoc(collection(db, "brands"), { ...data, createdAt: serverTimestamp() })
+  );
+export const deleteBrand = (id) => bust(deleteDoc(doc(db, "brands", id)));
 
 /* -------------------------------- cars --------------------------------- */
 export async function listCars({ publishedOnly = true } = {}) {
-  return safe(async () => {
-    const snap = await getDocs(collection(db, "cars"));
-    let items = snapList(snap);
-    if (publishedOnly) items = items.filter((c) => c.status === "published");
-    return items.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
-  }, []);
+  const items = await cached(
+    "cars",
+    async () => {
+      const snap = await getDocs(collection(db, "cars"));
+      return snapList(snap).sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+    },
+    []
+  );
+  return publishedOnly ? items.filter((c) => c.status === "published") : items;
 }
 export const getCar = (id) =>
   safe(async () => {
@@ -106,7 +155,8 @@ export const getCar = (id) =>
     return s.exists() ? { id: s.id, ...s.data() } : null;
   }, null);
 export const saveCar = (data, id) =>
-  id
+  bust(
+    id
     ? withTimeout(
         setDoc(
           doc(db, "cars", id),
@@ -124,8 +174,9 @@ export const saveCar = (data, id) =>
         }),
         WRITE_TIMEOUT_MS,
         "Saving the car"
-      );
-export const deleteCar = (id) => deleteDoc(doc(db, "cars", id));
+      )
+  );
+export const deleteCar = (id) => bust(deleteDoc(doc(db, "cars", id)));
 
 /* ------------------------------ inquiries ------------------------------ */
 export const addInquiry = (data) =>
