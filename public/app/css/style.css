@@ -805,9 +805,10 @@ input, select, textarea { border-radius: 0; }
 }
 
 /* =====================================================================
-   Wordmark — display face with a highlight that sweeps across on a loop.
-   The gradient is clipped to the glyphs, so the shine rides the letters
-   themselves rather than a box behind them.
+   Wordmark — a fixed metallic sheen clipped to the glyphs. Nothing moves:
+   a highlight travelling in and out drew the eye away from the page on
+   every screen, and animating background-position inside the sticky header
+   was what mis-rendered the letters on phones.
    ===================================================================== */
 @font-face {
   font-family: "Vengeance At Sea";
@@ -825,36 +826,18 @@ input, select, textarea { border-radius: 0; }
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .brand span, .admin-side .brand {
-    /* Base sits at .72 alpha — dim enough that the full-strength band reads
-       as a highlight, still 9:1 against the page in both themes. */
-    background-image: linear-gradient(100deg,
-      rgba(var(--fx-rgb), .70) 0%, rgba(var(--fx-rgb), .70) 35%,
-      rgba(var(--fx-rgb), .88) 45%,
-      rgb(var(--fx-rgb)) 50%,
-      rgba(var(--fx-rgb), .88) 55%,
-      rgba(var(--fx-rgb), .70) 65%, rgba(var(--fx-rgb), .70) 100%);
-    background-size: 300% 100%;
-    background-repeat: no-repeat;
+    /* Bright along the top, dipping through the middle, lifting again at the
+       base — the way light sits on polished metal. Darkest stop is .68 alpha,
+       which still clears 9:1 against the header in both themes. */
+    background-image: linear-gradient(176deg,
+      rgb(var(--fx-rgb)) 0%,
+      rgba(var(--fx-rgb), .82) 34%,
+      rgba(var(--fx-rgb), .68) 48%,
+      rgb(var(--fx-rgb)) 56%,
+      rgba(var(--fx-rgb), .86) 78%,
+      rgba(var(--fx-rgb), .95) 100%);
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
-    animation: brand-shine 3.4s linear infinite;
-  }
-}
-
-/* One continuous pass, no hold — a rest between sweeps read as the animation
-   freezing rather than resting. The highlight is off the glyphs at both ends,
-   so the wrap back to the start is invisible and the loop looks seamless. */
-@keyframes brand-shine {
-  from { background-position: 160% 0; }
-  to   { background-position: -60% 0; }
-}
-
-/* Transparent glyphs depend entirely on the gradient painting, so anything
-   that stops the animation must also restore a solid colour. */
-@media (prefers-reduced-motion: reduce) {
-  .brand span, .admin-side .brand {
-    animation: none; background-image: none;
-    -webkit-text-fill-color: currentColor; color: var(--text);
   }
 }
 
@@ -949,20 +932,12 @@ input, select, textarea { border-radius: 0; }
    Mobile fixes — artifacts and layout found on a real handset.
    ===================================================================== */
 
-/* The wordmark is gradient-clipped text animating its background-position
-   inside a sticky, backdrop-filtered header. Mobile compositors mis-repaint
-   that combination while scrolling: letters were dropped and a smear was
-   left behind — "CARVERSE" rendered as "ERSE". Paint it as plain text on
-   touch devices; the shine is decoration, a legible wordmark is not. */
+/* The sheen is static now, so the wordmark keeps it on phones — what broke
+   rendering was animating background-position on clipped text inside a
+   sticky, backdrop-filtered header, which dropped letters and left a smear.
+   The blur still goes: it is costly per frame and was the surface the
+   wordmark composited against. */
 @media (pointer: coarse), (max-width: 640px) {
-  .brand span, .admin-side .brand {
-    background-image: none;
-    -webkit-text-fill-color: currentColor;
-    color: var(--text);
-    animation: none;
-  }
-  /* Blur on a sticky element is costly per frame on phones and is what the
-     wordmark was compositing against. */
   .site-header { backdrop-filter: none; background: var(--bg); }
 }
 
