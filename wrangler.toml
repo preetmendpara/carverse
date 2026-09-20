@@ -18,7 +18,8 @@ bucket_name = "carverse-media"
 # Firebase web API key is public by design; it only identifies the project.
 FIREBASE_API_KEY = "AIzaSyDtNQMbEr_sIVNWirivrl9klcb3vpIFzZU"
 ADMIN_UIDS = "U95gwk62Ale4kPfCNSAlUQ7TQcq2"
-# Enquiry mail (Resend). The API key itself is a secret:
-#   npx wrangler secret put RESEND_API_KEY
-MAIL_FROM = "CarVerse <sales@carverse.de5.net>"
+# Enquiry mail (Brevo). The API key itself is a secret:
+#   npx wrangler secret put BREVO_API_KEY
+# Brevo verifies one sender address by email, so no DNS records are needed.
+MAIL_FROM = "CarVerse <priieeet@gmail.com>"
 SALES_EMAIL = "priieeet@gmail.com"

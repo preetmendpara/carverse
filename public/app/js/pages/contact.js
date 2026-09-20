@@ -61,10 +61,10 @@ import { mountChatbot } from "../features/chatbot.js";
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${await idToken()}` },
         body: JSON.stringify(values),
       })
-        .then((r) => r.ok)
-        .catch(() => false);
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
       e.target.reset();
-      status.textContent = mailed
+      status.textContent = mailed?.customerMailed
         ? `Thanks, ${values.name.split(" ")[0]}! We will call you within 24 hours. A confirmation is on its way to ${values.email}.`
         : `Thanks, ${values.name.split(" ")[0]}! We will call you within 24 hours.`;
       toast("Enquiry sent");

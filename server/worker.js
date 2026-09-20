@@ -120,18 +120,28 @@ const escapeHtml = (s = "") =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 async function sendMail(env, to, subject, html, replyTo) {
-  const res = await fetch("https://api.resend.com/emails", {
+  // Brevo verifies a single sender address by email, so enquiry mail works
+  // without owning DNS. MAIL_FROM is "Name <address>" or just the address.
+  const m = /^\s*(?:(.*?)\s*)?<?([^<>\s]+@[^<>\s]+)>?\s*$/.exec(env.MAIL_FROM || "");
+  if (!m) throw new Error("MAIL_FROM is not a valid sender address.");
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
+    headers: { "api-key": (env.BREVO_API_KEY || "").trim(), "Content-Type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      sender: { name: m[1] || "CarVerse", email: m[2] },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+    }),
   });
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  if (!res.ok) throw new Error(`Brevo ${res.status}: ${(await res.text()).slice(0, 200)}`);
 }
 
 // Two mails per enquiry: the dealer is alerted, the customer gets a receipt.
 async function handleInquiry(request, env) {
   if (request.method !== "POST") return bad(405, "Use POST.");
-  if (!env.RESEND_API_KEY || !env.MAIL_FROM || !env.SALES_EMAIL)
+  if (!env.BREVO_API_KEY || !env.MAIL_FROM || !env.SALES_EMAIL)
     return bad(500, "Email is not configured on the Worker.");
   const user = await signedInUser(request, env);
   if (!user) return bad(401, "Sign in to send an enquiry.");
@@ -145,27 +155,39 @@ async function handleInquiry(request, env) {
   if (!name || !email || !phone || !message) return bad(400, "Missing enquiry fields.");
 
   const row = (k, v) => `<tr><td><b>${k}</b></td><td>${escapeHtml(v)}</td></tr>`;
-  await sendMail(
+  try {
+    await sendMail(
     env,
     env.SALES_EMAIL,
     `New enquiry: ${car} — ${name}`,
-    `<h2>New car enquiry</h2><table>${row("Car", car)}${row("Name", name)}${row("Email", email)}${row("Phone", phone)}</table><p>${escapeHtml(message)}</p>`,
-    email
-  );
+      `<h2>New car enquiry</h2><table>${row("Car", car)}${row("Name", name)}${row("Email", email)}${row("Phone", phone)}</table><p>${escapeHtml(message)}</p>`,
+      email
+    );
+  } catch (err) {
+    // The enquiry is already in Firestore, so a mail outage is not a failure
+    // the customer should see — but it must be visible in the Worker logs.
+    console.error("sales alert failed", err.message);
+    return Response.json({ ok: false, customerMailed: false, error: err.message }, { status: 200 });
+  }
   // The customer's receipt must never fail the request: their enquiry is
   // already saved and the dealer already knows.
   try {
     await sendMail(
       env,
       email,
-      "We received your enquiry — CarVerse",
-      `<p>Hi ${escapeHtml(name)},</p><p>Thanks for your enquiry about <b>${escapeHtml(car)}</b>. Our team will call you within 24 hours.</p><p>Your message:</p><blockquote>${escapeHtml(message)}</blockquote><p>— CarVerse</p>`,
+      "CarVerse will contact you shortly",
+      `<p>Hi ${escapeHtml(name)},</p>
+       <p>Thanks for your enquiry about <b>${escapeHtml(car)}</b>. Our team will contact you shortly, within 24 hours, on ${escapeHtml(phone)}.</p>
+       <p>Your message:</p><blockquote>${escapeHtml(message)}</blockquote>
+       <p>You can reply to this email with anything else you want to know — price, finance or a test drive.</p>
+       <p>— CarVerse</p>`,
       env.SALES_EMAIL
     );
   } catch (err) {
-    console.error("customer receipt failed", err);
+    console.error("customer receipt failed", err.message);
+    return Response.json({ ok: true, customerMailed: false });
   }
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, customerMailed: true });
 }
 
 export default {
