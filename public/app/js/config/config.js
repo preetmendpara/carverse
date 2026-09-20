@@ -2,8 +2,8 @@
 // FIREBASE + GEMINI CONFIGURATION
 // Replace the placeholder values with your own project credentials.
 // Firebase web config values are public by design (they are not secrets).
-// NOTE: the Gemini key IS sensitive. For a college/minor project a restricted
-// key is acceptable; for real production traffic proxy it through a function.
+// The Gemini key is NOT here: it is a Worker secret, because anything in this
+// file is downloaded by every visitor. See `wrangler secret put GEMINI_API_KEY`.
 // ---------------------------------------------------------------------------
 export const firebaseConfig = {
   apiKey: "AIzaSyDtNQMbEr_sIVNWirivrl9klcb3vpIFzZU",
@@ -15,7 +15,6 @@ export const firebaseConfig = {
   measurementId: "G-515S2LDN63",
 };
 
-export const GEMINI_API_KEY = "REMOVED-old-key-revoked";
 // "-latest" alias so the chatbot survives model retirements.
 export const GEMINI_MODEL = "gemini-flash-latest";
 // UIDs granted admin access without needing an `admins` Firestore doc.

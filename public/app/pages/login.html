@@ -3,25 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin Sign In | %SITE%</title>
-  <meta name="description" content="Secure sign-in for site administrators to manage brands, cars, media, enquiries and settings.">
-  <meta name="robots" content="noindex">
+  <title>Sign In or Create an Account | %SITE%</title>
+  <meta name="description" content="Sign in to save cars, compare models, view 3D walkarounds, send enquiries and ask the AI assistant.">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="theme-color" content="#000000">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('carverse-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}catch(e){}</script>
-  <!-- The import graph is a waterfall otherwise: each module is
-       only discovered once its importer has parsed. -->
-  <link rel="modulepreload" href="js/features/demo-admin.js">
   <link rel="modulepreload" href="js/config/config.js">
-  <link rel="modulepreload" href="js/core/store.js">
   <link rel="modulepreload" href="js/config/firebase.js">
   <link rel="modulepreload" href="js/config/auth.js">
+  <link rel="modulepreload" href="js/core/user-auth.js">
   <link rel="modulepreload" href="js/components/layout.js">
-  <link rel="modulepreload" href="js/features/motion-fx.js">
-  <link rel="modulepreload" href="js/features/motion.js">
-  <link rel="modulepreload" href="js/features/animate.js">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -35,13 +28,19 @@
   </header>
   <main class="section">
     <div class="container" style="max-width:420px">
-      <h1 style="font-size:1.8rem">Admin login</h1>
-      <p class="small">Only registered administrators can access the dashboard.</p>
+      <h1 style="font-size:1.8rem" id="head">Sign in</h1>
+      <p class="small" id="lede">Sign in to save cars, compare, view 3D walkarounds, send enquiries and use the AI assistant.</p>
       <form class="card card-pad" id="form">
-        <div class="field"><label for="email">Email</label><input id="email" type="email" required></div>
-        <div class="field"><label for="password">Password</label><input id="password" type="password" required></div>
+        <div class="field" id="name-field" hidden><label for="name">Full name</label><input id="name" type="text" autocomplete="name"></div>
+        <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required minlength="6"></div>
         <button class="btn btn-primary btn-block" type="submit" id="submit">Sign in</button>
-        <p class="small" id="status" style="margin-top:12px"></p>
+        <p class="small" id="status" style="margin-top:12px" role="status"></p>
+        <p class="small" style="margin-top:12px">
+          <span id="switch-text">New here?</span>
+          <button type="button" class="btn btn-sm btn-ghost" id="switch">Create an account</button>
+        </p>
+        <p class="small"><button type="button" class="btn btn-sm btn-ghost" id="forgot">Forgot password?</button></p>
       </form>
     </div>
   </main>
@@ -55,6 +54,6 @@
       <div class="footer-bottom"><span>&copy; 2026 CarVerse. All rights reserved.</span></div>
     </div>
   </footer>
-  <script type="module" src="../js/pages/admin-login.js"></script>
+  <script type="module" src="../js/pages/login.js"></script>
 </body>
 </html>

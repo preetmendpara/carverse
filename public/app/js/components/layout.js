@@ -106,8 +106,32 @@ const NAV = [
   ["pages/compare.html", "Compare"],
   ["pages/wishlist.html", "Wishlist"],
   ["pages/contact.html", "Contact"],
-  ["pages/admin-login.html", "Admin"],
 ];
+
+/** Account link in the header. Painted from the cached user so it is right on
+ *  the first frame, then corrected once Firebase confirms the session. */
+function mountAccountLink(base) {
+  const nav = document.getElementById("nav-links");
+  if (!nav) return;
+  const paint = (user) => {
+    let a = document.getElementById("account-link");
+    if (!a) {
+      nav.insertAdjacentHTML("beforeend", `<a id="account-link" href="${base}pages/login.html"></a>`);
+      a = document.getElementById("account-link");
+    }
+    if (user) {
+      a.textContent = (user.name || user.email || "Account").split(" ")[0].split("@")[0].slice(0, 14);
+      a.href = `${base}pages/account.html`;
+    } else {
+      a.textContent = "Sign in";
+      a.href = `${base}pages/login.html?next=${encodeURIComponent(location.pathname + location.search)}`;
+    }
+  };
+  import("../core/user-auth.js").then(async (m) => {
+    paint(m.cachedUser());
+    paint(await m.currentUser());
+  });
+}
 
 export async function renderLayout({ base = "", active = "" } = {}) {
   initTheme();
@@ -138,6 +162,7 @@ export async function renderLayout({ base = "", active = "" } = {}) {
         ${themeButton()}
       </div>`;
       wireNavToggle();
+      mountAccountLink(base);
       document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
     }
 
@@ -154,7 +179,7 @@ export async function renderLayout({ base = "", active = "" } = {}) {
           </div>
           <div>
             <h4>Explore</h4>
-            ${NAV.slice(0, 6)
+            ${NAV
               .map(([href, label]) => `<a href="${base}${href || "index.html"}">${label}</a>`)
               .join("")}
           </div>
@@ -171,7 +196,6 @@ export async function renderLayout({ base = "", active = "" } = {}) {
         </div>
         <div class="footer-bottom">
           <span>\u00a9 ${new Date().getFullYear()} ${esc(name)}. All rights reserved.</span>
-          <span>GTU Minor Project</span>
         </div>
       </div>`;
     }
@@ -182,6 +206,7 @@ export async function renderLayout({ base = "", active = "" } = {}) {
   // actually override something — that avoids a visible second render.
   wireNavToggle();
   mountThemeToggle();
+  mountAccountLink(base);
   if (document.title.includes("%SITE%")) document.title = document.title.replace("%SITE%", "CarVerse");
 
   initMotionFx();

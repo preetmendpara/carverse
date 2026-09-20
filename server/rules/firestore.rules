@@ -23,25 +23,28 @@ service cloud.firestore {
     match /features/{id}       { allow read: if true; allow write: if isAdmin(); }
     match /settings/{id}       { allow read: if true; allow write: if isAdmin(); }
 
-    // Visitor-owned shortlists: created and removed by the visitor that owns them.
+    // Each row belongs to one signed-in account: a stranger can neither read
+    // nor delete someone else's saved cars.
     match /wishlist/{id} {
-      allow read: if true;
-      allow create: if request.resource.data.visitorId is string
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
                     && request.resource.data.carId is string;
-      allow delete: if true;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
       allow update: if isAdmin();
     }
     match /compare/{id} {
-      allow read: if true;
-      allow create: if request.resource.data.visitorId is string
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
                     && request.resource.data.carId is string;
-      allow delete: if true;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
       allow update: if isAdmin();
     }
 
-    // Visitors may submit enquiries; only admins can read, edit or delete them.
     match /customerInquiries/{id} {
-      allow create: if request.resource.data.name is string
+      allow create: if request.auth != null
+                    && request.resource.data.name is string
                     && request.resource.data.name.size() > 0
                     && request.resource.data.name.size() <= 100
                     && request.resource.data.email is string
@@ -54,7 +57,8 @@ service cloud.firestore {
 
     // Chatbot transcripts: visitors can log them, only admins can read/manage.
     match /chatHistory/{id} {
-      allow create: if request.resource.data.question is string
+      allow create: if request.auth != null
+                    && request.resource.data.question is string
                     && request.resource.data.question.size() <= 2000;
       allow read, update, delete: if isAdmin();
     }

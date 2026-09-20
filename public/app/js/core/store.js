@@ -202,10 +202,19 @@ export function visitorId() {
   }
   return id;
 }
+/** Wishlist and compare rows belong to an account, so one visitor can never
+ *  read or delete another's (see firestore.rules). */
+async function uid() {
+  const { currentUser } = await import("./user-auth.js");
+  const user = await currentUser();
+  if (!user) throw new Error("Sign in to save cars.");
+  return user.uid;
+}
+
 export async function listWishlist() {
   return safe(async () => {
     const snap = await getDocs(
-      query(collection(db, "wishlist"), where("visitorId", "==", visitorId()))
+      query(collection(db, "wishlist"), where("uid", "==", await uid()))
     );
     return snapList(snap);
   }, []);
@@ -218,6 +227,7 @@ export async function toggleWishlist(car) {
     return false;
   }
   await addDoc(collection(db, "wishlist"), {
+    uid: await uid(),
     visitorId: visitorId(),
     carId: car.id,
     createdAtMs: Date.now(),
@@ -230,7 +240,7 @@ export const removeWishlist = (id) => deleteDoc(doc(db, "wishlist", id));
 export async function listCompare() {
   return safe(async () => {
     const snap = await getDocs(
-      query(collection(db, "compare"), where("visitorId", "==", visitorId()))
+      query(collection(db, "compare"), where("uid", "==", await uid()))
     );
     return snapList(snap);
   }, []);
@@ -244,6 +254,7 @@ export async function toggleCompare(car) {
   }
   if (existing.length >= 4) throw new Error("You can compare up to 4 cars.");
   await addDoc(collection(db, "compare"), {
+    uid: await uid(),
     visitorId: visitorId(),
     carId: car.id,
     createdAtMs: Date.now(),

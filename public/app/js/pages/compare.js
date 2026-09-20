@@ -14,6 +14,7 @@ import { mountChatbot } from "../features/chatbot.js";
       c ? { ...c, _cmpId: rows[i].id } : null
     ).filter(Boolean);
 
+    document.getElementById("clear").hidden = !cars.length;
     if (!cars.length) {
       out.innerHTML = `<div class="empty">No cars selected for comparison. Add cars from the <a href="cars.html" style="text-decoration:underline">Cars</a> page.</div>`;
       return;

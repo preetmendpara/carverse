@@ -1,4 +1,5 @@
 import { esc, money, toast } from "./layout.js";
+import { requireUser } from "../core/user-auth.js";
 import { toggleWishlist, toggleCompare } from "../core/store.js";
 import { revealGrid, refreshMotionFx } from "../features/motion-fx.js";
 
@@ -48,6 +49,7 @@ export function renderCars(target, cars, base = "") {
     const car = cars.find((c) => c.id === el.dataset.car);
     el.querySelector('[data-act="wish"]').addEventListener("click", async () => {
       try {
+        if (!(await requireUser(base))) return;
         const added = await toggleWishlist(car);
         toast(added ? "Added to wishlist" : "Removed from wishlist");
       } catch (e) {
@@ -56,6 +58,7 @@ export function renderCars(target, cars, base = "") {
     });
     el.querySelector('[data-act="cmp"]').addEventListener("click", async () => {
       try {
+        if (!(await requireUser(base))) return;
         const added = await toggleCompare(car);
         toast(added ? "Added to compare" : "Removed from compare");
       } catch (e) {

@@ -116,7 +116,7 @@ textarea { min-height: 110px; resize: vertical; }
 
 .brand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
 .brand-card { padding: 20px; text-align: center; }
-.brand-card img { height: 40px; max-width: 100%; display: block; margin: 0 auto 12px; object-fit: contain; filter: grayscale(1) brightness(2); }
+.brand-card img { height: 40px; max-width: 100%; display: block; margin: 0 auto 12px; object-fit: contain; }
 .brand-card .logo-ph { height: 40px; display: grid; place-items: center; color: var(--muted); margin-bottom: 12px; }
 
 /* -------------------------------- hero -------------------------------- */
@@ -349,8 +349,8 @@ html.reduced-motion .marquee-track, html.light-motion .marquee-track { animation
   transition: transform .4s cubic-bezier(.22,1,.36,1), background .3s ease, border-color .3s ease;
 }
 .brand-card:hover { transform: translateY(-4px); background: var(--card-2); border-color: rgba(var(--fx-rgb), .35); }
-.brand-card img { transition: transform .4s ease, filter .3s ease; }
-.brand-card:hover img { transform: scale(1.08); filter: grayscale(0) brightness(2.2); }
+.brand-card img { transition: transform .4s ease; }
+.brand-card:hover img { transform: scale(1.08); }
 
 /* --------------------------- misc surfaces ---------------------------- */
 .grid-3 .card-pad h3 { font-family: var(--display); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
@@ -772,7 +772,6 @@ input, select, textarea { border-radius: 0; }
 }
 :root[data-theme="light"] #chat-fab { box-shadow: 0 10px 30px rgba(0, 0, 0, .22); }
 /* Brand logos are inverted for a dark page; undo that on a light one. */
-:root[data-theme="light"] .brand-card img { filter: grayscale(1) brightness(.15); }
 :root[data-theme="light"] .site-header { background: rgba(255, 255, 255, .9); }
 :root[data-theme="light"] .site-header.is-scrolled { background: rgba(255, 255, 255, .86); }
 /* The hero car is a dark cut-out, so it needs a light backdrop to sit on. */

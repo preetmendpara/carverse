@@ -1,6 +1,7 @@
 import { renderLayout, esc, toast } from "../components/layout.js";
 import { carTitle } from "../components/car-card.js";
 import { listCars, addInquiry, visitorId } from "../core/store.js";
+import { currentUser, requireUser, idToken } from "../core/user-auth.js";
 import { mountChatbot } from "../features/chatbot.js";
 
 (async function init() {
@@ -16,6 +17,12 @@ import { mountChatbot } from "../features/chatbot.js";
       ${s.contactAddress ? `<tr><td>Address</td><td>${esc(s.contactAddress)}</td></tr>` : ""}
     </table>`;
 
+  const user = await currentUser();
+  if (user) {
+    document.getElementById("name").value = user.displayName || "";
+    document.getElementById("email").value = user.email || "";
+  }
+
   const cars = await listCars();
   const sel = document.getElementById("car");
   cars.forEach((c) => sel.add(new Option(carTitle(c), c.id)));
@@ -24,6 +31,7 @@ import { mountChatbot } from "../features/chatbot.js";
 
   document.getElementById("form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!(await requireUser("../"))) return;
     const btn = document.getElementById("submit");
     const status = document.getElementById("status");
     const values = {
@@ -46,8 +54,19 @@ import { mountChatbot } from "../features/chatbot.js";
     btn.disabled = true;
     try {
       await addInquiry(values);
+      // Saving is what matters; mail is best-effort so a mail outage never
+      // loses an enquiry the admin can still read in the dashboard.
+      const mailed = await fetch("/api/inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await idToken()}` },
+        body: JSON.stringify(values),
+      })
+        .then((r) => r.ok)
+        .catch(() => false);
       e.target.reset();
-      status.textContent = "Thanks! Your enquiry has been sent.";
+      status.textContent = mailed
+        ? `Thanks, ${values.name.split(" ")[0]}! We will call you within 24 hours. A confirmation is on its way to ${values.email}.`
+        : `Thanks, ${values.name.split(" ")[0]}! We will call you within 24 hours.`;
       toast("Enquiry sent");
     } catch (err) {
       console.error(err);

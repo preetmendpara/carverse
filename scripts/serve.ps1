@@ -13,4 +13,4 @@ Write-Host "  Ctrl+C to stop" -ForegroundColor DarkGray
 Write-Host ""
 
 Start-Process $url
-python -m http.server $Port --directory public
+python scripts/serve.py $Port

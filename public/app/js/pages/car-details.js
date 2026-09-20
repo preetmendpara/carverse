@@ -1,6 +1,7 @@
 import { renderLayout, esc, money, toast } from "../components/layout.js";
 import { carTitle, carCover } from "../components/car-card.js";
 import { getCar, toggleWishlist, toggleCompare, listWishlist, listCompare } from "../core/store.js";
+import { requireUser, cachedUser, currentUser } from "../core/user-auth.js";
 import { mountChatbot } from "../features/chatbot.js";
 import { fallbackCarById } from "../data/fallback-cars.js";
 import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.js";
@@ -11,7 +12,7 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
   const box = document.getElementById("detail");
   const id = new URLSearchParams(location.search).get("id");
   if (!id) {
-    box.innerHTML = `<div class="empty">No car selected.</div>`;
+    box.innerHTML = `<div class="empty">No car selected. <a href="cars.html" style="text-decoration:underline">Browse all cars</a></div>`;
     return;
   }
   let car = await getCar(id);
@@ -61,6 +62,12 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
         }</div>`
       : "";
 
+  // Admin specs often repeat a field the car document already has under a
+  // different name ("Fuel" vs "Fuel type", "Odometer" vs "Mileage"), which
+  // printed the same value twice in the table.
+  const ALIAS = { fuel: "fuel type", "fuel type": "fuel type", odometer: "mileage", mileage: "mileage", "kms driven": "mileage" };
+  const canon = (k) => ALIAS[k.trim().toLowerCase()] || k.trim().toLowerCase();
+  const seen = new Set();
   const specRows = Object.entries({
     Brand: car.brandName,
     Model: car.model,
@@ -77,7 +84,13 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
     "Ground clearance": car.groundClearance,
     ...(car.specifications || {}),
   })
-    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .filter(([k, v]) => {
+      if (v === undefined || v === null || v === "") return false;
+      const key = canon(k);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`)
     .join("");
 
@@ -126,7 +139,7 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
             <button class="btn btn-primary btn-block" id="wish">Add to wishlist</button>
             <button class="btn btn-block" id="cmp">Add to compare</button>
             <button class="btn btn-block" id="ask">Ask AI about this car</button>
-            <a class="btn btn-block" href="contact.html?car=${encodeURIComponent(car.id)}">Enquire now</a>
+            <a class="btn btn-block" id="enq" href="contact.html?car=${encodeURIComponent(car.id)}">Enquire now</a>
           </div>
         </div>
       </aside>
@@ -161,6 +174,7 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
   });
   wishBtn.addEventListener("click", async () => {
     try {
+      if (!(await requireUser("../"))) return;
       const on = await toggleWishlist(car);
       setState(wishBtn, on, "In wishlist — remove", "Add to wishlist");
       toast(on ? "Added to wishlist" : "Removed from wishlist");
@@ -168,22 +182,35 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
   });
   cmpBtn.addEventListener("click", async () => {
     try {
+      if (!(await requireUser("../"))) return;
       const on = await toggleCompare(car);
       setState(cmpBtn, on, "In compare — remove", "Add to compare");
       toast(on ? "Added to compare" : "Removed from compare");
     } catch (e) { toast(e.message); }
   });
-  document.getElementById("ask").addEventListener("click", () => {
+  document.getElementById("ask").addEventListener("click", async () => {
+    if (!(await requireUser("../"))) return;
     chat?.open();
     const input = document.getElementById("chat-input");
     input.value = `Tell me about the ${carTitle(car)}`;
     input.focus();
   });
 
-  // 3D viewer only when a model URL exists in Firestore.
+  document.getElementById("enq").addEventListener("click", async (e) => {
+    if (cachedUser()) return; // already signed in: follow the link as normal
+    e.preventDefault();
+    if (await requireUser("../")) location.href = e.currentTarget.href;
+  });
+
+  // 3D viewer only when a model URL exists in Firestore, and only for members.
   if (car.modelUrl) {
     const section = document.getElementById("viewer-section");
     section.style.display = "block";
+    if (!(await currentUser())) {
+      section.querySelector("#viewer-wrap").innerHTML =
+        `<div class="empty">Sign in to view the 3D walkaround. <a href="login.html?next=${encodeURIComponent(location.pathname + location.search)}" style="text-decoration:underline">Sign in</a></div>`;
+      return;
+    }
     const canvas = document.getElementById("viewer-canvas");
     canvas.addEventListener("model-error", () => (section.style.display = "none"));
     const { initViewer } = await import("../features/viewer3d.js");
