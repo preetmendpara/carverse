@@ -36,6 +36,16 @@
   <main class="section">
     <div class="container">
       <div class="section-head" data-reveal><h1 style="font-size:2rem">Cars</h1><span class="muted small" id="count"></span></div>
+      <section class="card card-pad finder" id="finder" aria-labelledby="finder-title">
+        <h2 id="finder-title" class="finder-title">Car Finder</h2>
+        <form id="finder-form" class="finder-row">
+          <label for="finder-q" class="visually-hidden">Describe the car you need</label>
+          <input id="finder-q" maxlength="500" autocomplete="off" placeholder="Describe what you need, e.g. an automatic under ₹12 lakh, mostly city driving">
+          <button class="btn btn-primary" type="submit" id="finder-go">Find matches</button>
+        </form>
+        <p class="small muted finder-note">AI reads your request. The matching is rule-based, and every result shows why it matched.</p>
+        <div id="finder-out" aria-live="polite"></div>
+      </section>
       <div class="filters">
         <input id="f-q" placeholder="Search model, brand, variant…">
         <select id="f-brand"><option value="">All brands</option></select>

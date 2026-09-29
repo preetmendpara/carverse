@@ -1,6 +1,8 @@
 import { renderLayout, esc } from "../components/layout.js";
 import { renderCars } from "../components/car-card.js";
 import { mountChatbot } from "../features/chatbot.js";
+import { mountFinder } from "../features/car-finder.js";
+import { FUELS, TRANSMISSIONS, matchesFuel, matchesTransmission } from "../core/car-fields.js";
 import {
   loadCatalog,
   priceRanges,
@@ -13,6 +15,7 @@ import {
 (async function init() {
   await renderLayout({ base: "../", active: "Cars" });
   mountChatbot();
+  mountFinder({ base: "../" });
 
   const params = new URLSearchParams(location.search);
   document.getElementById("grid").innerHTML = `<p class="muted small">Loading inventory…</p>`;
@@ -34,9 +37,12 @@ import {
   brands.forEach((b) => el.brand.add(new Option(b.name || b.id, b.id)));
   if (params.get("brand")) el.brand.value = params.get("brand");
 
-  const uniq = (key) => [...new Set(cars.map((c) => c[key]).filter(Boolean))].sort();
-  uniq("fuelType").forEach((v) => el.fuel.add(new Option(v, v)));
-  uniq("transmission").forEach((v) => el.trans.add(new Option(v, v)));
+  // Options come from the effective values, in the fixed list order, and only
+  // where at least one car consistently has them. A car whose fuel or gearbox
+  // is conflicting or missing is shown under "All" only.
+  const has = (list, test) => list.filter(([k]) => cars.some((c) => test(c, k)));
+  has(FUELS, matchesFuel).forEach(([v, l]) => el.fuel.add(new Option(l, v)));
+  has(TRANSMISSIONS, matchesTransmission).forEach(([v, l]) => el.trans.add(new Option(l, v)));
   priceRanges(cars).forEach((r) => el.price.add(new Option(r.label, r.value)));
   const availPresent = new Set(cars.map(availabilityOf));
   AVAILABILITY.filter(([k]) => availPresent.has(k)).forEach(([k, l]) =>
@@ -58,8 +64,8 @@ import {
             String(brand.name || "").trim().toLowerCase();
         if (!sameId && !sameName) return false;
       }
-      if (el.fuel.value && c.fuelType !== el.fuel.value) return false;
-      if (el.trans.value && c.transmission !== el.trans.value) return false;
+      if (!matchesFuel(c, el.fuel.value)) return false;
+      if (!matchesTransmission(c, el.trans.value)) return false;
       if (!inPriceRange(c, el.price.value)) return false;
       if (el.avail.value && availabilityOf(c) !== el.avail.value) return false;
       return true;

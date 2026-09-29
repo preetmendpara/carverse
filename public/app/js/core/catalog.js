@@ -4,6 +4,7 @@
  * back to the demo seed when the collections are still empty.
  */
 import { listCars, listBrands } from "./store.js";
+import { effectiveFields, searchText } from "./car-fields.js";
 
 let cache = null;
 let cachedAt = 0;
@@ -51,8 +52,11 @@ export function availabilityOf(car) {
 export const availabilityLabel = (v) =>
   (AVAILABILITY.find(([k]) => k === v) || ["", "In stock"])[1];
 
+// The original Firestore fields stay as they are; the single interpretation of
+// them (car-fields.js) is attached as `effective`, so every page reads the same
+// answer instead of re-parsing the raw fields.
 function normalizeCar(c) {
-  return { ...c, availability: availabilityOf(c) };
+  return { ...c, availability: availabilityOf(c), effective: effectiveFields(c) };
 }
 
 export const carPrice = (c) => Number(c?.price) || 0;
@@ -101,20 +105,5 @@ export function inPriceRange(car, value) {
 
 export function searchCar(car, q) {
   if (!q) return true;
-  const hay = [
-    car.brandName,
-    car.brand,
-    car.model,
-    car.variant,
-    car.fuelType,
-    car.transmission,
-    car.year,
-    car.engine,
-    availabilityLabel(availabilityOf(car)),
-    ...(car.features || []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q);
+  return searchText(car, availabilityLabel(availabilityOf(car))).includes(q);
 }

@@ -17,6 +17,7 @@ bucket_name = "carverse-media"
 [vars]
 # Firebase web API key is public by design; it only identifies the project.
 FIREBASE_API_KEY = "AIzaSyDtNQMbEr_sIVNWirivrl9klcb3vpIFzZU"
+FIREBASE_PROJECT_ID = "carverse-ai-project"
 ADMIN_UIDS = "U95gwk62Ale4kPfCNSAlUQ7TQcq2"
 # Enquiry mail (Brevo). The API key itself is a secret:
 #   npx wrangler secret put BREVO_API_KEY

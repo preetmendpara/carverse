@@ -55,6 +55,31 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // AI Car Finder logs, for evaluation. A signed-in buyer may create a log for
+    // themselves only; only admins may read or delete; nobody may edit one.
+    // hasAll + hasOnly = exactly the eight fields the Worker writes
+    // (server/match/log.js, buildMatchLog). expireAt drives a Firestore TTL policy.
+    // clickedId is RESERVED and must be null: logs are immutable (no update, by
+    // anyone), so it cannot be filled in later. Unused in Phase 1.
+    match /matchLogs/{id} {
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasAll(['uid', 'query', 'requirements', 'resultIds', 'clickedId', 'model', 'createdAt', 'expireAt'])
+                    && request.resource.data.keys().hasOnly(['uid', 'query', 'requirements', 'resultIds', 'clickedId', 'model', 'createdAt', 'expireAt'])
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.query is string
+                    && request.resource.data.query.size() > 0
+                    && request.resource.data.query.size() <= 500
+                    && request.resource.data.requirements is map
+                    && request.resource.data.resultIds is list
+                    && request.resource.data.resultIds.size() <= 3
+                    && request.resource.data.clickedId == null
+                    && request.resource.data.model is string
+                    && request.resource.data.createdAt is timestamp
+                    && request.resource.data.expireAt is timestamp;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
     // Chatbot transcripts: visitors can log them, only admins can read/manage.
     match /chatHistory/{id} {
       allow create: if request.auth != null

@@ -2,13 +2,16 @@ import { renderLayout, esc, money, toast } from "../components/layout.js";
 import { carTitle, carCover } from "../components/car-card.js";
 import { getCar, toggleWishlist, toggleCompare, listWishlist, listCompare } from "../core/store.js";
 import { requireUser, cachedUser, currentUser } from "../core/user-auth.js";
+import * as F from "../core/car-fields.js";
 import { mountChatbot } from "../features/chatbot.js";
 import { fallbackCarById } from "../data/fallback-cars.js";
 import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.js";
 
 (async function init() {
   await renderLayout({ base: "../", active: "Cars" });
-  const chat = mountChatbot();
+  // Questions asked on this page are about this car: the Worker sees its id
+  // and answers from this car's record only.
+  const chat = mountChatbot({ carId: new URLSearchParams(location.search).get("id") });
   const box = document.getElementById("detail");
   const id = new URLSearchParams(location.search).get("id");
   if (!id) {
@@ -62,36 +65,40 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
         }</div>`
       : "";
 
-  // Admin specs often repeat a field the car document already has under a
-  // different name ("Fuel" vs "Fuel type", "Odometer" vs "Mileage"), which
-  // printed the same value twice in the table.
-  const ALIAS = { fuel: "fuel type", "fuel type": "fuel type", odometer: "mileage", mileage: "mileage", "kms driven": "mileage" };
-  const canon = (k) => ALIAS[k.trim().toLowerCase()] || k.trim().toLowerCase();
-  const seen = new Set();
-  const specRows = Object.entries({
-    Brand: car.brandName,
-    Model: car.model,
-    Variant: car.variant,
-    Year: car.year,
-    "Fuel type": car.fuelType,
-    Transmission: car.transmission,
-    Engine: car.engine,
-    Mileage: car.mileage,
-    Horsepower: car.horsepower,
-    Torque: car.torque,
-    Seats: car.seats,
-    "Boot space": car.bootSpace,
-    "Ground clearance": car.groundClearance,
-    ...(car.specifications || {}),
-  })
-    .filter(([k, v]) => {
-      if (v === undefined || v === null || v === "") return false;
-      const key = canon(k);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+  // Two kinds of row. "optional" rows are left out when empty, as before.
+  // "always" rows show "Not provided" (or "Not confirmed" for a data conflict)
+  // rather than a guess. Specification-map keys these rows already cover are
+  // dropped by F.extraSpecs, which keeps the placeholder odometers and the
+  // conflicting duplicates off the page.
+  const optional = (k, v) => ["optional", k, v];
+  const always = (k, text, conflict = false) => ["always", k, F.orNotProvided(text, conflict)];
+  const specRows = [
+    optional("Brand", car.brandName),
+    optional("Model", car.model),
+    optional("Variant", car.variant),
+    optional("Year", car.year),
+    always("Body type", F.bodyTypeText(car)),
+    always("Fuel type", F.fuelText(car), F.fuelConflict(car)),
+    always("Transmission", F.transmissionText(car), F.transmissionConflict(car)),
+    optional("Engine", car.engine),
+    always("Fuel economy", F.fuelEconomyText(car)),
+    always("Kilometres driven", F.kmDrivenText(car)),
+    always("Power", F.powerText(car)),
+    optional("Torque", car.torque),
+    optional("Seats", car.seats),
+    always("Boot capacity", F.bootText(car)),
+    always("Ground clearance", F.groundClearanceText(car)),
+    always("Colour", F.colourText(car)),
+    always("Owners", F.ownersText(car)),
+    always("Airbags", F.airbagsText(car)),
+    always("NCAP rating", F.ncapText(car)),
+    ...F.extraSpecs(car).map(([k, v]) => optional(k, v)),
+  ]
+    .filter(([kind, , v]) => kind === "always" || !(v === undefined || v === null || v === ""))
+    .map(([, k, v]) => {
+      const missing = v === F.NOT_PROVIDED || v === F.NOT_CONFIRMED;
+      return `<tr><td>${esc(k)}</td><td${missing ? ' class="muted"' : ""}>${esc(v)}</td></tr>`;
     })
-    .map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`)
     .join("");
 
   box.innerHTML = `

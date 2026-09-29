@@ -2,13 +2,15 @@ import { esc, money, toast } from "./layout.js";
 import { requireUser } from "../core/user-auth.js";
 import { toggleWishlist, toggleCompare } from "../core/store.js";
 import { revealGrid, refreshMotionFx } from "../features/motion-fx.js";
+import { fuelText, transmissionText, fuelEconomyText } from "../core/car-fields.js";
 
 export const carTitle = (c) => [c.brandName, c.model, c.variant].filter(Boolean).join(" ");
 export const carCover = (c) => c.mainImage || (c.gallery && c.gallery[0]) || c.thumbnail || "";
 
 export function carCard(car, base = "") {
   const img = carCover(car);
-  const chips = [car.year, car.fuelType, car.transmission, car.mileage ? `${car.mileage}` : ""]
+  // A chip is left out rather than shown with a guessed or conflicting value.
+  const chips = [car.year, fuelText(car), transmissionText(car), fuelEconomyText(car)]
     .filter(Boolean)
     .map((v) => `<span class="chip">${esc(v)}</span>`)
     .join("");

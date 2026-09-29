@@ -2,6 +2,10 @@
 // CarVerse Worker: serves the static site, plus admin media upload/serve on R2.
 // Everything else falls through to the static assets in public/.
 // ---------------------------------------------------------------------------
+import { generateJson, generateText, GeminiError } from "./lib/gemini.js";
+import { listPublishedCars, writeMatchLog } from "./lib/firestore.js";
+import { handleMatchRequest } from "./match/api.js";
+import { handleChatRequest } from "./chat/api.js";
 
 // Mirrors the folder allowlist the admin panel uploads into.
 const FOLDERS = new Set([
@@ -35,7 +39,7 @@ async function signedInUser(request, env) {
   );
   if (!res.ok) return null;
   const user = (await res.json())?.users?.[0];
-  return user ? { uid: user.localId, email: user.email } : null;
+  return user ? { uid: user.localId, email: user.email, idToken } : null;
 }
 
 // Google validates the signature and expiry for us, so we only decide who is
@@ -96,24 +100,6 @@ async function serveMedia(url, env) {
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
   return new Response(object.body, { headers });
-}
-
-// The Gemini key stays here as a Worker secret. When it lived in the page
-// source anyone could copy it and spend the quota.
-async function handleChat(request, env) {
-  if (request.method !== "POST") return bad(405, "Use POST.");
-  if (!env.GEMINI_API_KEY) return bad(500, "GEMINI_API_KEY is not set on the Worker.");
-  if (!(await signedInUser(request, env))) return bad(401, "Sign in to use the assistant.");
-
-  const { model, body } = await request.json().catch(() => ({}));
-  if (!model || !body) return bad(400, "Missing model or body.");
-  if (!/^gemini-[\w.-]+$/.test(model)) return bad(400, "Unknown model.");
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-  );
-  return new Response(res.body, { status: res.status, headers: { "Content-Type": "application/json" } });
 }
 
 const escapeHtml = (s = "") =>
@@ -190,11 +176,24 @@ async function handleInquiry(request, env) {
   return Response.json({ ok: true, customerMailed: true });
 }
 
+/* ------------------------- /api/match, /api/chat ---------------------- */
+// Both live in their own modules and receive their network helpers here, so
+// the handlers are tested without real Gemini, Firestore or Firebase Auth.
+const aiDeps = {
+  auth: signedInUser,
+  extract: generateJson,
+  answer: generateText,
+  listCars: listPublishedCars,
+  writeLog: writeMatchLog,
+  GeminiError,
+};
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/upload") return handleUpload(request, env);
-    if (url.pathname === "/api/chat") return handleChat(request, env);
+    if (url.pathname === "/api/chat") return handleChatRequest(request, env, aiDeps);
+    if (url.pathname === "/api/match") return handleMatchRequest(request, env, aiDeps);
     if (url.pathname === "/api/inquiry") return handleInquiry(request, env);
     if (url.pathname.startsWith("/media/")) return serveMedia(url, env);
     return env.ASSETS.fetch(request);

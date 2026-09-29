@@ -2,6 +2,7 @@ import { renderLayout, esc, money, toast } from "../components/layout.js";
 import { carTitle } from "../components/car-card.js";
 import { listCompare, removeCompare, getCar } from "../core/store.js";
 import { mountChatbot } from "../features/chatbot.js";
+import * as F from "../core/car-fields.js";
 
 (async function init() {
   await renderLayout({ base: "../", active: "Compare" });
@@ -20,19 +21,23 @@ import { mountChatbot } from "../features/chatbot.js";
       return;
     }
 
-    const specKeys = [...new Set(cars.flatMap((c) => Object.keys(c.specifications || {})))];
+    // Only specification keys the rows below do not already cover, so the
+    // placeholder odometers and conflicting duplicates stay off the table.
+    const specKeys = [...new Set(cars.flatMap((c) => F.extraSpecs(c).map(([k]) => k)))];
     const fields = [
       ["Price", (c) => money(c.price)],
       ["Year", (c) => c.year],
-      ["Mileage", (c) => c.mileage],
+      ["Body type", (c) => F.orNotProvided(F.bodyTypeText(c))],
+      ["Fuel economy", (c) => F.orNotProvided(F.fuelEconomyText(c))],
+      ["Kilometres driven", (c) => F.orNotProvided(F.kmDrivenText(c))],
       ["Engine", (c) => c.engine],
-      ["Transmission", (c) => c.transmission],
-      ["Fuel type", (c) => c.fuelType],
-      ["Horsepower", (c) => c.horsepower],
+      ["Transmission", (c) => F.orNotProvided(F.transmissionText(c), F.transmissionConflict(c))],
+      ["Fuel type", (c) => F.orNotProvided(F.fuelText(c), F.fuelConflict(c))],
+      ["Power", (c) => F.orNotProvided(F.powerText(c))],
       ["Torque", (c) => c.torque],
       ["Seats", (c) => c.seats],
-      ["Boot space", (c) => c.bootSpace],
-      ["Ground clearance", (c) => c.groundClearance],
+      ["Boot space", (c) => F.orNotProvided(F.bootText(c))],
+      ["Ground clearance", (c) => F.orNotProvided(F.groundClearanceText(c))],
       ...specKeys.map((k) => [k, (c) => (c.specifications || {})[k]]),
       ["Features", (c) => (c.features || []).join(", ")],
     ];

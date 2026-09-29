@@ -11,8 +11,9 @@ import { esc, money, toast, initTheme, toggleTheme } from "../components/layout.
 import { carTitle } from "../components/car-card.js";
 import * as store from "../core/store.js";
 import { matchesBrand } from "../core/catalog.js";
+import { provenanceText, effectiveFields } from "../core/car-fields.js";
+import { NORMALIZED_FIELDS, fieldView, buildNormalizedWrite, reconcileReview, buildBasicWrite } from "../core/admin-fields.js";
 import { initAnimations } from "../features/animate.js";
-import { isDemoAdmin, demoSignOut } from "../features/demo-admin.js";
 
 initTheme();
 initAnimations();
@@ -75,7 +76,6 @@ function readImageField(id) {
 
 document.getElementById("logout").addEventListener("click", async (e) => {
   e.preventDefault();
-  demoSignOut();
   await signOut(auth).catch(() => {});
   location.replace("../pages/admin-login.html");
 });
@@ -94,28 +94,24 @@ const head = (title, actions = "") =>
   `<div class="admin-head"><h1 style="font-size:1.5rem">${title}</h1><div class="row-actions">${actions}</div></div>`;
 
 /* ----------------------------- auth guard ------------------------------ */
-// Must run after ROUTES is initialised — demo mode routes synchronously.
+// Must run after ROUTES is initialised.
 const startRouting = () => {
   window.addEventListener("hashchange", route);
   route();
 };
 
-if (isDemoAdmin()) {
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    location.replace("../pages/admin-login.html");
+    return;
+  }
+  if (!(await store.isAdmin(user.uid))) {
+    await signOut(auth);
+    location.replace("../pages/admin-login.html");
+    return;
+  }
   startRouting();
-} else {
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      location.replace("../pages/admin-login.html");
-      return;
-    }
-    if (!(await store.isAdmin(user.uid))) {
-      await signOut(auth);
-      location.replace("../pages/admin-login.html");
-      return;
-    }
-    startRouting();
-  });
-}
+});
 
 /* ------------------------------ dashboard ------------------------------ */
 async function dashboard() {
@@ -258,12 +254,23 @@ async function cars() {
     store.listBrands(),
   ]);
   const box = document.createElement("div");
+  // Body type is entered by hand only (never guessed or migrated). Until a car
+  // has one, the Car Finder cannot match it to an SUV / sedan / … request.
+  const noBody = list.filter((c) => effectiveFields(c).bodyType === null);
+  const bodyBanner = noBody.length
+    ? `<div class="card card-pad" role="status" style="margin-bottom:16px">
+        <strong>${noBody.length} of ${list.length} cars have no body type.</strong>
+        <p class="small" style="margin:6px 0 0">The Car Finder treats a missing body type as unknown, so these cars never match a request for an SUV, sedan or other body type. Open each car, check it, and set <em>Structured details → Body type</em>.</p>
+      </div>`
+    : "";
   box.innerHTML = list.length
-    ? `<table class="table"><thead><tr><th>Car</th><th>Price</th><th>Year</th><th>Status</th><th></th></tr></thead>
+    ? `${bodyBanner}<table class="table"><thead><tr><th>Car</th><th>Price</th><th>Year</th><th>Status</th><th></th></tr></thead>
       <tbody>${list
         .map(
           (c) => `<tr>
-        <td>${esc(carTitle(c))} ${c.featured ? `<span class="badge">Featured</span>` : ""}</td>
+        <td>${esc(carTitle(c))} ${c.featured ? `<span class="badge">Featured</span>` : ""}
+          ${effectiveFields(c).bodyType === null ? `<span class="badge">No body type</span>` : ""}
+          ${(c.dataReview || []).length ? `<span class="badge" title="${esc(c.dataReview.join("\n"))}">${c.dataReview.length} to review</span>` : ""}</td>
         <td>${money(c.price)}</td><td>${esc(c.year || "—")}</td>
         <td><span class="badge">${c.status === "published" ? "Published" : "Draft"}</span></td>
         <td><div class="row-actions">
@@ -304,13 +311,62 @@ const SIMPLE_FIELDS = [
   ["fuelType", "Fuel type", "text"],
   ["transmission", "Transmission", "text"],
   ["engine", "Engine", "text"],
-  ["mileage", "Mileage", "text"],
+  ["mileage", "Mileage (legacy text)", "text"],
   ["horsepower", "Horsepower", "text"],
   ["torque", "Torque", "text"],
   ["seats", "Seats", "number"],
   ["bootSpace", "Boot space", "text"],
   ["groundClearance", "Ground clearance", "text"],
 ];
+
+// Normalised fields (added by the Phase 0 migration). The site prefers these
+// over the legacy text fields above. Rendering and saving rules live in
+// core/admin-fields.js; input ids are prefixed "n-" so they never collide with
+// a legacy field of a similar name.
+function normalizedInput(field, car) {
+  const v = fieldView(field, car);
+  const attrs = Object.entries(v.attrs).map(([a, x]) => ` ${a}="${esc(x)}"`).join("");
+  // data-initial is what the control started as: a field whose control still
+  // holds it was not touched and is left out of the save.
+  const control =
+    v.inputType === "select"
+      ? `<select id="n-${v.key}" data-initial="${esc(v.value)}">${v.options
+          .map((o) => `<option value="${esc(o.value)}" ${o.value === v.value ? "selected" : ""}>${esc(o.label)}</option>`)
+          .join("")}</select>`
+      : `<input id="n-${v.key}" type="${v.inputType}"${attrs} value="${esc(v.value)}" data-initial="${esc(v.value)}" placeholder="Not provided">`;
+  const source = car && v.value !== "" ? `<span class="muted small">${esc(provenanceText(car, v.key))}</span>` : "";
+  const warning = v.warning
+    ? `<span class="small" role="note" style="display:block;margin-top:4px">⚠ ${esc(v.warning)}</span>`
+    : v.key === "bodyType" && v.value === ""
+      ? `<span class="small muted" role="note" style="display:block;margin-top:4px">Not set: the Car Finder can't match this car to a body-type request. Enter it after checking the car.</span>`
+      : "";
+  return `<div class="field"><label for="n-${v.key}">${esc(v.label)}</label>${control}${source}${warning}</div>`;
+}
+
+/** Initial and current value of every normalised control. */
+const readNormalizedControls = () =>
+  Object.fromEntries(
+    NORMALIZED_FIELDS.map(([key]) => {
+      const el = document.getElementById(`n-${key}`);
+      return [key, { initial: el.dataset.initial, current: el.value }];
+    })
+  );
+
+function reviewPanel(car) {
+  const items = car?.dataReview || [];
+  if (!items.length) return "";
+  return `
+    <div class="card card-pad" style="margin-bottom:16px">
+      <h3 style="margin-top:0">Data to review (${items.length})</h3>
+      <p class="small">Found when the data was migrated. Correct the field below, then tick the item; ticked items are removed when you save.</p>
+      ${items
+        .map(
+          (t, i) =>
+            `<div class="field checkbox"><input type="checkbox" id="rv-${i}" data-review="${i}"><label for="rv-${i}" style="margin:0">${esc(t)}</label></div>`
+        )
+        .join("")}
+    </div>`;
+}
 
 // A full URL, or a site-relative path so images committed under
 // public/app/uploads/ can be used without Firebase Storage.
@@ -331,6 +387,7 @@ async function carForm(car = null, brandList = null) {
 
   openModal(`
     <h2>${car ? "Edit" : "Add"} car</h2>
+    ${reviewPanel(car)}
     <form id="cf">
       <div class="field"><label>Brand</label>
         <select id="brandId" required>
@@ -353,6 +410,11 @@ async function carForm(car = null, brandList = null) {
         ).join("")}
       </div>
       <div class="field"><label>Description</label><textarea id="description">${esc(car?.description || "")}</textarea></div>
+
+      <div class="divider"></div>
+      <h3>Structured details</h3>
+      <p class="small">The site shows these in preference to the legacy text above. Leave a field empty when you don't know it; it then shows as "Not provided". Airbags and NCAP only from the manufacturer's spec sheet.</p>
+      <div class="grid-2">${NORMALIZED_FIELDS.map((f) => normalizedInput(f, car)).join("")}</div>
 
       <div class="divider"></div>
       <h3>Specifications (unlimited)</h3>
@@ -453,6 +515,40 @@ async function carForm(car = null, brandList = null) {
     });
   }
 
+  // Everything on the form except the normalised fields, images and 3D model,
+  // read the same way when the form opens and at save. Only keys whose value
+  // differs are written (buildBasicWrite), so a body-type-only save leaves the
+  // rest of the stored car exactly as it was.
+  const readBasic = () => {
+    const brandId = document.getElementById("brandId").value;
+    const basic = { brandId, brandName: brandsAvailable.find((b) => b.id === brandId)?.name || "" };
+    SIMPLE_FIELDS.forEach(([k, , t]) => {
+      const raw = document.getElementById(k).value.trim();
+      basic[k] = raw === "" ? null : t === "number" ? Number(raw) : raw;
+    });
+    basic.description = document.getElementById("description").value.trim();
+    basic.status = document.getElementById("status").value;
+    basic.availability = document.getElementById("availability").value;
+    basic.featured = document.getElementById("featured").checked;
+    basic.specifications = {};
+    document.querySelectorAll("#specs .kv-row").forEach((r) => {
+      const k = r.querySelector("[data-k]").value.trim();
+      const v = r.querySelector("[data-v]").value.trim();
+      if (k) basic.specifications[k] = v;
+    });
+    basic.features = [...document.querySelectorAll("#features [data-f]")].map((i) => i.value.trim()).filter(Boolean);
+    return basic;
+  };
+  const initialBasic = readBasic();
+  // Image lists as the form showed them on opening, stored the way the save stores them.
+  const imageValue = (urls, multi) => (multi ? urls : urls[urls.length - 1] || null);
+  const initialImages = Object.fromEntries(
+    IMAGE_GROUPS.map(([key, , , multi]) => [
+      key,
+      imageValue([...document.querySelectorAll(`[data-existing="${key}"] .item`)].map((i) => i.dataset.url), multi),
+    ])
+  );
+
   let removeModel = false;
   document.getElementById("rm-model")?.addEventListener("click", (e) => {
     removeModel = true;
@@ -473,27 +569,22 @@ async function carForm(car = null, brandList = null) {
     saveBtn.disabled = true;
     try {
       st.textContent = "Saving…";
-      const brandId = document.getElementById("brandId").value;
-      const brand = brandsAvailable.find((b) => b.id === brandId);
-      const data = { brandId, brandName: brand?.name || "" };
-      SIMPLE_FIELDS.forEach(([k, , t]) => {
-        const raw = document.getElementById(k).value.trim();
-        data[k] = raw === "" ? null : t === "number" ? Number(raw) : raw;
-      });
-      data.description = document.getElementById("description").value.trim();
-      data.status = document.getElementById("status").value;
-      data.availability = document.getElementById("availability").value;
-      data.featured = document.getElementById("featured").checked;
+      // A new car writes every field; an edit writes only what changed.
+      const basic = readBasic();
+      const data = car ? buildBasicWrite(initialBasic, basic) : { ...basic, schemaVersion: 1 };
 
-      data.specifications = {};
-      document.querySelectorAll("#specs .kv-row").forEach((r) => {
-        const k = r.querySelector("[data-k]").value.trim();
-        const v = r.querySelector("[data-v]").value.trim();
-        if (k) data.specifications[k] = v;
-      });
-      data.features = [...document.querySelectorAll("#features [data-f]")]
-        .map((i) => i.value.trim())
-        .filter(Boolean);
+      // Normalised fields: only the ones the admin changed are written. An
+      // untouched field is left out, so Firestore keeps it exactly as stored.
+      // A changed value is marked "admin"; a cleared one "unknown".
+      const { write, provenance } = buildNormalizedWrite(car, readNormalizedControls());
+      Object.assign(data, write);
+      if (!car || Object.keys(write).length) data.provenance = provenance;
+      // Ticked notes go; a changed field also drops or restores its "not recorded" note.
+      const review = reconcileReview(
+        (car?.dataReview || []).filter((_, i) => !document.querySelector(`[data-review="${i}"]`)?.checked),
+        write
+      );
+      if (!car || JSON.stringify(review) !== JSON.stringify(car.dataReview || [])) data.dataReview = review;
 
       for (const [key, label, folder, multi] of IMAGE_GROUPS) {
         const kept = [...document.querySelectorAll(`[data-existing="${key}"] .item`)].map(
@@ -509,8 +600,8 @@ async function carForm(car = null, brandList = null) {
           .split(/[\n,]+/)
           .map((s) => s.trim())
           .filter((s) => IMAGE_REF.test(s));
-        const all = [...kept, ...uploaded, ...pasted];
-        data[key] = multi ? all : all[all.length - 1] || null;
+        const value = imageValue([...kept, ...uploaded, ...pasted], multi);
+        if (!car || JSON.stringify(value) !== JSON.stringify(initialImages[key])) data[key] = value;
       }
 
       // NB: not "model" — that id belongs to the car's Model text field.

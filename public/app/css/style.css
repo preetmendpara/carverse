@@ -946,3 +946,39 @@ input, select, textarea { border-radius: 0; }
   body { padding-bottom: 72px; }
   #chat-fab { padding: 12px 16px; font-size: 11px; }
 }
+
+/* --------------------------- AI Car Finder --------------------------- */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.finder { margin-bottom: 24px; }
+.finder-title { font-family: var(--display); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; font-weight: 400; margin: 0 0 12px; }
+.finder-row { display: flex; gap: 10px; }
+.finder-row input { flex: 1; min-width: 0; }
+.finder-note { margin: 10px 0 0; }
+#finder-out:not(:empty) { margin-top: 18px; border-top: 1px solid var(--hairline); padding-top: 16px; }
+.finder-understood { display: grid; gap: 6px; margin-bottom: 10px; }
+.finder-chip { cursor: pointer; background: transparent; color: var(--text); }
+.finder-chip:hover, .finder-chip:focus-visible { border-color: var(--text); }
+.finder-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 14px 0 12px; }
+.finder-head h3 { margin: 0; }
+.finder-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.finder-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+.finder-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.finder-score { font-family: var(--display); font-size: 26px; letter-spacing: .04em; white-space: nowrap; }
+.finder-reasons { margin: 10px 0; padding-left: 18px; font-size: 14px; }
+.finder-reasons li { margin-bottom: 4px; }
+.finder-why summary { cursor: pointer; margin-top: 6px; }
+.finder-why .spec-table th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 8px 6px 0; font-size: 12px; }
+.finder-why .spec-table td { padding: 6px 8px 6px 0; width: auto; font-size: 13px; vertical-align: top; }
+.finder-why { overflow-x: auto; }
+.finder-near { margin-top: 18px; }
+.finder-near h4 { margin: 0 0 6px; font-size: 14px; }
+.finder-near ul { margin: 0; padding-left: 18px; font-size: 14px; }
+@media (max-width: 640px) {
+  .finder-row { flex-direction: column; }
+  .finder-row .btn { width: 100%; }
+}
+.finder-chip.is-inferred { border-style: dashed; }
+.finder-chip.is-inferred em { font-style: normal; opacity: .7; text-transform: lowercase; }
+.finder-near li { margin-bottom: 6px; }
+.chat-results { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.chat-results ul { padding-left: 16px; margin: 2px 0 6px; }

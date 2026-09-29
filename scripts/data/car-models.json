@@ -1,0 +1,23 @@
+{
+  "_about": "Reference data for the carModels collection. One entry per model CarVerse stocks. Body type, seat options and fuel options describe the model line-up sold in India, not one specific used car, so a listing is checked against them rather than filled from them. Compiled from the manufacturers' published India line-ups; `verified` stays false until someone checks each row against the current spec sheet. Airbags and NCAP are deliberately null: they vary by variant and year and must come from an authoritative spec sheet, never from memory.",
+  "models": [
+    { "brand": "Kia",        "model": "Seltos",            "bodyType": "compact_suv", "seatOptions": [5],    "fuelOptions": ["petrol", "diesel"] },
+    { "brand": "Hyundai",    "model": "i20",               "bodyType": "hatchback",   "seatOptions": [5],    "fuelOptions": ["petrol"] },
+    { "brand": "Hyundai",    "model": "Venue",             "bodyType": "compact_suv", "seatOptions": [5],    "fuelOptions": ["petrol", "diesel"] },
+    { "brand": "Honda",      "model": "City",              "bodyType": "sedan",       "seatOptions": [5],    "fuelOptions": ["petrol", "hybrid"] },
+    { "brand": "Honda",      "model": "Elevate",           "bodyType": "compact_suv", "seatOptions": [5],    "fuelOptions": ["petrol"] },
+    { "brand": "Toyota",     "model": "Innova Hycross",    "bodyType": "muv",         "seatOptions": [7, 8], "fuelOptions": ["petrol", "hybrid"] },
+    { "brand": "Toyota",     "model": "Fortuner",          "bodyType": "suv",         "seatOptions": [7],    "fuelOptions": ["petrol", "diesel"] },
+    { "brand": "Ford",       "model": "F-150 Raptor",      "bodyType": "pickup",      "seatOptions": [5],    "fuelOptions": ["petrol"] },
+    { "brand": "Ford",       "model": "Mustang",           "bodyType": "coupe",       "seatOptions": [4],    "fuelOptions": ["petrol"] },
+    { "brand": "Jeep",       "model": "Wrangler Rubicon",  "bodyType": "suv",         "seatOptions": [5],    "fuelOptions": ["petrol"] },
+    { "brand": "Volvo",      "model": "S90",               "bodyType": "sedan",       "seatOptions": [5],    "fuelOptions": ["petrol"] },
+    { "brand": "Volvo",      "model": "XC90",              "bodyType": "suv",         "seatOptions": [7],    "fuelOptions": ["petrol"] },
+    { "brand": "Land Rover", "model": "Defender 110",      "bodyType": "suv",         "seatOptions": [5, 7], "fuelOptions": ["petrol", "diesel"] },
+    { "brand": "Land Rover", "model": "Range Rover Vogue", "bodyType": "suv",         "seatOptions": [5],    "fuelOptions": ["petrol", "diesel"] },
+    { "brand": "Audi",       "model": "SQ8",               "bodyType": "suv",         "seatOptions": [5],    "fuelOptions": ["petrol"] },
+    { "brand": "Audi",       "model": "RS7 Sportback",     "bodyType": "sedan",       "seatOptions": [4, 5], "fuelOptions": ["petrol"] },
+    { "brand": "BMW",        "model": "X1",                "bodyType": "compact_suv", "seatOptions": [5],    "fuelOptions": ["petrol", "diesel"] },
+    { "brand": "BMW",        "model": "M4 Competition",    "bodyType": "coupe",       "seatOptions": [4],    "fuelOptions": ["petrol"] }
+  ]
+}

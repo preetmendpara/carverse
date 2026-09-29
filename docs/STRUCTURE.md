@@ -41,7 +41,6 @@ public/                        FRONTEND (also the deploy output)
         animate.js             Page fade transitions
         motion.js              Reduced-motion + device capability policy
         motion-fx.js           Reveals, counters, tilt, scroll-words, parallax
-        demo-admin.js          Local admin bypass when Firebase is unconfigured
       pages/                   One entry script per page
 
 server/                        BACKEND
