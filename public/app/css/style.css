@@ -982,3 +982,19 @@ input, select, textarea { border-radius: 0; }
 .finder-near li { margin-bottom: 6px; }
 .chat-results { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
 .chat-results ul { padding-left: 16px; margin: 2px 0 6px; }
+
+/* Admin photo-reading status. Border-only so it works in both themes; the
+   text always says the status, colour is a hint. */
+.badge.ai-observed { border-color: #2e9d5b; color: #2e9d5b; }
+.badge.ai-uncertain { border-color: #c9922b; color: #c9922b; }
+.badge.ai-not_visible { color: var(--muted); }
+.ai-photo summary { cursor: pointer; }
+.ai-photo textarea { width: 100%; }
+
+/* AI Compare */
+.cmp-picks { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.cmp-pick { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.cmp-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: 16px 0; }
+.cmp-assess.is-winner { border-color: var(--text, currentColor); }
+.cmp-facts { margin: 4px 0 8px; padding-left: 18px; }
+.cmp-result { margin-top: 20px; }

@@ -14,6 +14,7 @@ import { matchesBrand } from "../core/catalog.js";
 import { provenanceText, effectiveFields } from "../core/car-fields.js";
 import { NORMALIZED_FIELDS, fieldView, buildNormalizedWrite, reconcileReview, buildBasicWrite } from "../core/admin-fields.js";
 import { initAnimations } from "../features/animate.js";
+import { photoListingPanel, mountPhotoListing } from "../features/photo-listing.js";
 
 initTheme();
 initAnimations();
@@ -388,6 +389,7 @@ async function carForm(car = null, brandList = null) {
   openModal(`
     <h2>${car ? "Edit" : "Add"} car</h2>
     ${reviewPanel(car)}
+    ${photoListingPanel()}
     <form id="cf">
       <div class="field"><label>Brand</label>
         <select id="brandId" required>
@@ -549,6 +551,8 @@ async function carForm(car = null, brandList = null) {
     ])
   );
 
+  const photoAi = mountPhotoListing({ brands: brandsAvailable });
+
   let removeModel = false;
   document.getElementById("rm-model")?.addEventListener("click", (e) => {
     removeModel = true;
@@ -585,6 +589,15 @@ async function carForm(car = null, brandList = null) {
         write
       );
       if (!car || JSON.stringify(review) !== JSON.stringify(car.dataReview || [])) data.dataReview = review;
+
+      // AI photo-to-listing: values the admin applied AND left unchanged are
+      // marked "ai-photo"; the full reading (status, confidence, evidence,
+      // damage) is kept in aiListing. Edited values stay the admin's own.
+      const ai = photoAi.kept();
+      if (ai) {
+        data.provenance = { ...(data.provenance || car?.provenance || {}), ...ai.provenance };
+        data.aiListing = ai.record;
+      }
 
       for (const [key, label, folder, multi] of IMAGE_GROUPS) {
         const kept = [...document.querySelectorAll(`[data-existing="${key}"] .item`)].map(

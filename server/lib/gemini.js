@@ -22,7 +22,11 @@ const OVERALL_DEADLINE_MS = 20000;
 
 export class GeminiError extends Error {}
 
-/** Asks Gemini for JSON matching `schema`. Returns { data, modelVersion }. */
+/**
+ * Asks Gemini for JSON matching `schema`. Returns { data, modelVersion }.
+ * `images` (optional): [{ mimeType, data }] with base64 data, sent after the
+ * text in the same user turn (photo-to-listing).
+ */
 export const generateJson = (env, opts) => generate(env, opts);
 
 /** Asks Gemini for a plain-text answer. Returns { data: string, modelVersion }. */
@@ -32,12 +36,12 @@ export const generateText = (env, opts) => generate(env, { ...opts, schema: null
  * One hedged request, JSON (with schema) or text (schema null).
  * Throws GeminiError with a message safe to show the buyer.
  */
-async function generate(env, { system, user, schema, maxOutputTokens = 800, plan = HEDGE_PLAN, fetchImpl = fetch, attemptTimeoutMs = ATTEMPT_TIMEOUT_MS, deadlineMs = OVERALL_DEADLINE_MS }) {
+async function generate(env, { system, user, images = [], schema, maxOutputTokens = 800, plan = HEDGE_PLAN, fetchImpl = fetch, attemptTimeoutMs = ATTEMPT_TIMEOUT_MS, deadlineMs = OVERALL_DEADLINE_MS }) {
   const key = String(env.GEMINI_API_KEY || "").trim();
   if (!key) throw new GeminiError("The AI service is not configured.");
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },
-    contents: [{ role: "user", parts: [{ text: user }] }],
+    contents: [{ role: "user", parts: [{ text: user }, ...images.map((i) => ({ inlineData: { mimeType: i.mimeType, data: i.data } }))] }],
     generationConfig: schema
       ? { responseMimeType: "application/json", responseSchema: schema, temperature: 0, maxOutputTokens }
       : { temperature: 0.2, maxOutputTokens },

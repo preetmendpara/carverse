@@ -6,6 +6,8 @@ import { generateJson, generateText, GeminiError } from "./lib/gemini.js";
 import { listPublishedCars, writeMatchLog } from "./lib/firestore.js";
 import { handleMatchRequest } from "./match/api.js";
 import { handleChatRequest } from "./chat/api.js";
+import { handleCompareAi } from "./compare/api.js";
+import { handlePhotoListing } from "./listing/api.js";
 
 // Mirrors the folder allowlist the admin panel uploads into.
 const FOLDERS = new Set([
@@ -42,31 +44,18 @@ async function signedInUser(request, env) {
   return user ? { uid: user.localId, email: user.email, idToken } : null;
 }
 
-// Google validates the signature and expiry for us, so we only decide who is
-// allowed in. A forged or expired token fails here, not in our own crypto.
-async function adminUid(request, env) {
-  const header = request.headers.get("Authorization") || "";
-  const idToken = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!idToken) return null;
-
-  const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
-    }
-  );
-  if (!res.ok) return null;
-
-  const uid = (await res.json())?.users?.[0]?.localId;
+// Google validates the signature and expiry for us (signedInUser), so we only
+// decide who is allowed in. A forged or expired token fails there, not in our
+// own crypto. Returns { uid, email, idToken } for an admin, else null.
+async function adminUser(request, env) {
+  const user = await signedInUser(request, env);
   const allowed = (env.ADMIN_UIDS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  return uid && allowed.includes(uid) ? uid : null;
+  return user && allowed.includes(user.uid) ? user : null;
 }
 
 async function handleUpload(request, env) {
   if (request.method !== "POST") return bad(405, "Use POST.");
-  if (!(await adminUid(request, env))) return bad(401, "Admin sign-in required.");
+  if (!(await adminUser(request, env))) return bad(401, "Admin sign-in required.");
 
   const form = await request.formData();
   const file = form.get("file");
@@ -188,13 +177,22 @@ const aiDeps = {
   GeminiError,
 };
 
+// Admin-only AI tools. Same pattern: Gemini reads, plain code decides.
+const adminAiDeps = {
+  admin: adminUser,
+  extract: generateJson,
+  GeminiError,
+};
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/upload") return handleUpload(request, env);
     if (url.pathname === "/api/chat") return handleChatRequest(request, env, aiDeps);
     if (url.pathname === "/api/match") return handleMatchRequest(request, env, aiDeps);
+    if (url.pathname === "/api/compare-ai") return handleCompareAi(request, env, aiDeps);
     if (url.pathname === "/api/inquiry") return handleInquiry(request, env);
+    if (url.pathname === "/api/photo-listing") return handlePhotoListing(request, env, adminAiDeps);
     if (url.pathname.startsWith("/media/")) return serveMedia(url, env);
     return env.ASSETS.fetch(request);
   },

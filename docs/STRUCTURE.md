@@ -45,7 +45,14 @@ public/                        FRONTEND (also the deploy output)
 
 server/                        BACKEND
   worker.js                    Cloudflare Worker: serves public/, plus
-                               POST /api/upload and GET /media/* backed by R2
+                               POST /api/upload and GET /media/* backed by R2,
+                               and routes the AI endpoints below
+  lib/                         gemini.js (hedged, server-only), firestore.js, http.js
+  match/                       /api/match: AI Car Finder (rank.js = deterministic ranking)
+  chat/                        /api/chat: assistant, routed through the Finder pipeline
+  compare/                     /api/compare-ai: AI Compare (facts in code, Gemini explains)
+  listing/                     /api/photo-listing: admin photo reading + validation
+                               (see docs/AI-FEATURES.md)
   rules/
     firestore.rules            Database authorisation
     storage.rules              Legacy Firebase Storage rules (unused: media

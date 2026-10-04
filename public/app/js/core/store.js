@@ -329,3 +329,27 @@ export async function uploadFile(folder, file) {
   }
   return res.json();
 }
+/* ---------------------------- admin AI tools --------------------------- */
+// Runs on the Worker, which checks the admin's ID token. Gemini is only
+// ever called there; the browser never sees a key.
+async function adminAi(path, body, isForm = false) {
+  const { auth } = await import("../config/auth.js");
+  const user = auth.currentUser;
+  if (!user) throw new Error("Sign in as an admin first.");
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await user.getIdToken()}`, ...(isForm ? {} : { "Content-Type": "application/json" }) },
+    body: isForm ? body : JSON.stringify(body),
+    signal: AbortSignal.timeout(70000),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || `Request failed (${res.status}).`);
+  return data;
+}
+
+/** Reads 5-10 car photos; returns fields for review. Saves nothing. */
+export function analysePhotos(files) {
+  const body = new FormData();
+  files.forEach((f) => body.append("photos", f));
+  return adminAi("/api/photo-listing", body, true);
+}

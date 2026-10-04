@@ -226,6 +226,8 @@ export function provenanceText(car, field) {
   const p = String(car?.provenance?.[field] || "");
   if (p.startsWith("migrated")) return `Migrated from old "${p.split(":")[1] || "field"}"`;
   if (p === "admin") return "Entered by admin";
+  // Read from photos by AI, then checked and saved by an admin (photo-to-listing).
+  if (p === "ai-photo") return "From photos (AI), reviewed by admin";
   if (p.startsWith("reference") || p.startsWith("database")) return "Reference data";
   return "Unknown source";
 }
