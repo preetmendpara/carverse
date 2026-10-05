@@ -7,7 +7,6 @@ import {
   loadCatalog,
   priceRanges,
   inPriceRange,
-  searchCar,
   availabilityOf,
   AVAILABILITY,
 } from "../core/catalog.js";
@@ -15,14 +14,12 @@ import {
 (async function init() {
   await renderLayout({ base: "../", active: "Cars" });
   mountChatbot();
-  mountFinder({ base: "../" });
 
   const params = new URLSearchParams(location.search);
   document.getElementById("grid").innerHTML = `<p class="muted small">Loading inventory…</p>`;
   const { cars, brands } = await loadCatalog();
 
   const el = {
-    q: document.getElementById("f-q"),
     brand: document.getElementById("f-brand"),
     fuel: document.getElementById("f-fuel"),
     trans: document.getElementById("f-trans"),
@@ -33,7 +30,6 @@ import {
     count: document.getElementById("count"),
   };
 
-  el.q.value = params.get("q") || "";
   brands.forEach((b) => el.brand.add(new Option(b.name || b.id, b.id)));
   if (params.get("brand")) el.brand.value = params.get("brand");
 
@@ -51,11 +47,14 @@ import {
   if (params.get("price")) el.price.value = params.get("price");
   if (params.get("availability")) el.avail.value = params.get("availability");
 
+  // The Car Finder is the page's only search box; brand/model names typed in
+  // it narrow this grid (null = every car). Dropdowns below still apply.
+  let nameIds = null;
+
   function apply() {
-    const q = el.q.value.trim().toLowerCase();
     const brand = brands.find((b) => b.id === el.brand.value);
     let list = cars.filter((c) => {
-      if (!searchCar(c, q)) return false;
+      if (nameIds && !nameIds.has(c.id)) return false;
       if (el.brand.value) {
         const sameId = c.brandId === el.brand.value;
         const sameName =
@@ -82,9 +81,18 @@ import {
     renderCars(el.grid, list, "../");
   }
 
-  ["q", "brand", "fuel", "trans", "price", "avail", "sort"].forEach((k) => {
+  ["brand", "fuel", "trans", "price", "avail", "sort"].forEach((k) => {
     el[k].addEventListener("input", apply);
     el[k].addEventListener("change", apply);
+  });
+  mountFinder({
+    base: "../",
+    cars,
+    initialQuery: params.get("q") || "",
+    onNames: (ids) => {
+      nameIds = ids;
+      apply();
+    },
   });
   apply();
   void esc;

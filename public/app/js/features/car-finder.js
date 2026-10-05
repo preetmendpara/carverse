@@ -2,12 +2,23 @@
 // sentence into requirements, plain code ranks the cars. This file only shows
 // the result and lets the buyer correct what was understood. Removing a chip
 // re-ranks through the same endpoint without asking the AI again.
+//
+// This is the Cars page's ONLY search input. Brand and model names are matched
+// in plain code first (catalog.js nameSearch): a name-only query ("BMW",
+// "Toyota Fortuner", "any model") just filters the grid, with no AI call and
+// no sign-in. Anything else goes to the AI Finder; names in it ("BMW under 50
+// lakh") limit the ranked results to those cars. Ranking itself is unchanged.
 import { esc, money } from "../components/layout.js";
 import { idToken, requireUser } from "../core/user-auth.js";
 import { removeChip } from "../core/requirements.js";
 import { SUITABILITY_NOTE } from "../core/car-tags.js";
+import { nameSearch } from "../core/catalog.js";
 
-export function mountFinder({ base = "../" } = {}) {
+/**
+ * cars: the catalogue on the page. onNames(ids|null): the grid shows only these
+ * car ids (null = all cars).
+ */
+export function mountFinder({ base = "../", cars = [], onNames = () => {}, initialQuery = "" } = {}) {
   const form = document.getElementById("finder-form");
   if (!form) return;
   const input = document.getElementById("finder-q");
@@ -15,6 +26,7 @@ export function mountFinder({ base = "../" } = {}) {
   const out = document.getElementById("finder-out");
   let current = null; // the last requirements the Worker returned
   let lastPayload = null; // for "Try again"
+  let names = null; // { ids, label } from a name in the AI query, or null
 
   async function run(payload) {
     if (!(await requireUser(base))) return;
@@ -44,9 +56,34 @@ export function mountFinder({ base = "../" } = {}) {
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const query = input.value.trim();
-    if (query) run({ query });
+    search(input.value.trim());
   });
+
+  function search(query) {
+    const n = nameSearch(cars, query);
+    if (!query || n.nameOnly) {
+      // Names only (or "any model"): filter the grid in code, no AI.
+      names = null;
+      current = null;
+      onNames(n.ids);
+      out.innerHTML = n.ids
+        ? `<p class="small">Showing ${n.ids.size} car${n.ids.size === 1 ? "" : "s"} matching ${esc(n.label)} below. <button type="button" class="btn btn-sm btn-ghost" data-clear>Show all</button></p>`
+        : query
+          ? `<p class="small muted">Showing every car below. Describe a budget, body type or need to get ranked matches.</p>`
+          : "";
+      return;
+    }
+    names = n.ids ? { ids: n.ids, label: n.label } : null;
+    onNames(null);
+    run({ query });
+  }
+  // A search handed over in the URL (?q=…), e.g. from the home page. Names run
+  // at once; an AI request waits for the buyer to press the button, so opening
+  // the page never forces a sign-in.
+  if (initialQuery) {
+    input.value = initialQuery;
+    if (nameSearch(cars, initialQuery).nameOnly) search(initialQuery);
+  }
 
   out.addEventListener("click", (e) => {
     const chip = e.target.closest("[data-remove]");
@@ -55,6 +92,8 @@ export function mountFinder({ base = "../" } = {}) {
     if (e.target.closest("[data-clear]")) {
       out.innerHTML = "";
       current = null;
+      names = null;
+      onNames(null);
       input.value = "";
       input.focus();
     }
@@ -81,7 +120,11 @@ export function mountFinder({ base = "../" } = {}) {
   }
 
   function render(data) {
-    const warnings = data.validation?.warnings || [];
+    // A brand or model named in the request limits the ranked list to it.
+    if (names) {
+      data = { ...data, results: data.results.filter((r) => names.ids.has(r.carId)), nearMisses: data.nearMisses.filter((n) => names.ids.has(n.carId)) };
+    }
+    const warnings = [...(data.validation?.warnings || []), ...(names ? [`Showing only ${names.label}.`] : [])];
     out.innerHTML = `
       ${chipsHtml(data.understood)}
       ${warnings.map((w) => `<p class="small muted">${esc(w)}</p>`).join("")}

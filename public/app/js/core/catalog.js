@@ -4,7 +4,7 @@
  * back to the demo seed when the collections are still empty.
  */
 import { listCars, listBrands } from "./store.js";
-import { effectiveFields, searchText } from "./car-fields.js";
+import { effectiveFields } from "./car-fields.js";
 
 let cache = null;
 let cachedAt = 0;
@@ -103,7 +103,6 @@ export function inPriceRange(car, value) {
   return true;
 }
 
-export function searchCar(car, q) {
-  if (!q) return true;
-  return searchText(car, availabilityLabel(availabilityOf(car))).includes(q);
-}
+/* --------------------------- name search (Finder) ---------------------- */
+// Pure and in its own file so it can be tested without Firebase.
+export { nameSearch } from "./name-search.js";

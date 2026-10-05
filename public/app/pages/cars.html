@@ -39,15 +39,14 @@
       <section class="card card-pad finder" id="finder" aria-labelledby="finder-title">
         <h2 id="finder-title" class="finder-title">Car Finder</h2>
         <form id="finder-form" class="finder-row">
-          <label for="finder-q" class="visually-hidden">Describe the car you need</label>
-          <input id="finder-q" maxlength="500" autocomplete="off" placeholder="Describe what you need, e.g. an automatic under ₹12 lakh, mostly city driving">
+          <label for="finder-q" class="visually-hidden">Search cars: describe the car you want, or type a brand or model</label>
+          <input id="finder-q" maxlength="500" autocomplete="off" placeholder="Describe the car you want, e.g. find cars under ₹12 lakh, BMW, or any SUV">
           <button class="btn btn-primary" type="submit" id="finder-go">Find matches</button>
         </form>
-        <p class="small muted finder-note">AI reads your request. The matching is rule-based, and every result shows why it matched.</p>
+        <p class="small muted finder-note">Type a brand or model to filter the list instantly. For anything else (budget, body type, fuel, features, how you drive) AI reads your request, the matching is rule-based, and every result shows why it matched.</p>
         <div id="finder-out" aria-live="polite"></div>
       </section>
       <div class="filters">
-        <input id="f-q" placeholder="Search model, brand, variant…">
         <select id="f-brand"><option value="">All brands</option></select>
         <select id="f-fuel"><option value="">All fuel types</option></select>
         <select id="f-trans"><option value="">All transmissions</option></select>
