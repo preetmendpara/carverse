@@ -7,6 +7,7 @@ import { mountChatbot } from "../features/chatbot.js";
 import { fallbackCarById } from "../data/fallback-cars.js";
 import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.js";
 import { modelView } from "../core/model-source.js";
+import { embedFrame } from "../features/sketchfab-import.js";
 
 (async function init() {
   await renderLayout({ base: "../", active: "Cars" });
@@ -211,9 +212,8 @@ import { modelView } from "../core/model-source.js";
   });
 
   // 3D viewer only when a model exists in Firestore, and only for members.
-  // Models we host open in our own clean viewer. A Sketchfab model is NOT
-  // iframed here (its player brings media controls we cannot remove): the
-  // section shows a clean card that opens the official Sketchfab viewer.
+  // Models we host: our Three.js viewer. A Sketchfab model: the official
+  // Sketchfab viewer, embedded in the same fixed-height box (never a redirect).
   const model = modelView(car);
   if (model) {
     const section = document.getElementById("viewer-section");
@@ -224,15 +224,9 @@ import { modelView } from "../core/model-source.js";
       return;
     }
     if (model.kind === "embed") {
-      const cover = carCover(car);
-      document.getElementById("viewer-wrap").innerHTML = `<div class="viewer-card">
-          ${cover ? `<img src="${esc(cover)}" alt="${esc(carTitle(car))}" loading="lazy">` : ""}
-          <div class="viewer-card-body">
-            <p>An interactive 3D model of this car is available on Sketchfab.</p>
-            <a class="btn btn-primary" href="${esc(model.sourceUrl)}" target="_blank" rel="noopener">View 3D on Sketchfab</a>
-          </div>
-        </div>`;
-      document.getElementById("model-credit").textContent = `3D model: ${model.attribution}. Opens Sketchfab's own viewer in a new tab.`;
+      document.getElementById("viewer-wrap").innerHTML = embedFrame(model.url, carTitle(car));
+      // Secondary credit under the viewer: only the source link.
+      document.getElementById("model-credit").innerHTML = `3D model on Sketchfab · <a href="${esc(model.sourceUrl)}" target="_blank" rel="noopener" style="text-decoration:underline">View on Sketchfab</a>`;
       return;
     }
     const canvas = document.getElementById("viewer-canvas");

@@ -35,12 +35,15 @@ and **Remove** each replace the previous model.
 - The credit line Sketchfab includes in its embed code is kept as plain text
   (tags and `<`/`>` removed, 200 characters max). For a pasted URL, the admin
   can type the credit.
-- The car page never embeds Sketchfab's player (it forces media controls we
-  cannot remove). A local model (`/media/…` only) opens in the built-in
-  Three.js viewer: rotate, zoom, pan, no animation or fullscreen. A Sketchfab
-  model shows a clean card with a "View 3D on Sketchfab" button that opens the
-  official viewer in a new tab, and the credit as plain text. The sandboxed
-  Sketchfab iframe is used only for the admin's Preview. No model: the 3D
-  section stays hidden.
+- The car page shows the model inside the fixed-height "3D Model" box, never
+  as a redirect. A local model (`/media/…` only) uses the built-in Three.js
+  viewer (rotate, zoom, pan; no animation or fullscreen). A Sketchfab model
+  uses the official Sketchfab viewer in a sandboxed iframe whose src is the
+  validated embed URL plus the options Sketchfab documents with no account
+  limitation: `autostart=1`, `animation_autoplay=0`, `ui_stop=0`. The `ui_*`
+  options that hide Sketchfab's info bar, timeline, buttons, hint and logo
+  are Premium-only on the model owner's account and are not sent; Sketchfab
+  shows that UI and CarVerse does not hide it with overlays. A small "3D model on Sketchfab · View on Sketchfab" link sits
+  under the box. No model: the 3D section stays hidden.
 - Uploads: browsers send `.glb`/`.gltf` with an empty type, so for the
   `3d-models` folder the Worker takes the type from the extension.

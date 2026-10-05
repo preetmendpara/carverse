@@ -168,3 +168,23 @@ export function modelView(car) {
   // A local model is always a path on this site (/media/...).
   return url.startsWith("/") && !url.startsWith("//") ? { kind: "gltf", url } : null;
 }
+
+// Sketchfab embed options, added when the viewer is drawn (the stored embedUrl
+// stays canonical). Only options Sketchfab documents with no account
+// limitation (sketchfab.com/developers/viewer/initialization): load the model
+// straight away, never play its animations, and hide the "disable viewer"
+// button. The ui_* options that hide the info bar, timeline, help, settings,
+// fullscreen, VR/AR, hint and watermark are Premium-only on the model OWNER's
+// account, so they are not sent; Sketchfab shows that UI and CarVerse does
+// not hide it. Rotate, zoom and pan stay.
+export const SKETCHFAB_VIEWER_OPTIONS = {
+  autostart: 1,
+  animation_autoplay: 0,
+  ui_stop: 0,
+};
+
+/** The URL to iframe for a stored embed URL, or null unless it is exactly a Sketchfab model embed. */
+export function sketchfabViewerUrl(embedUrl) {
+  if (!EMBED.test(String(embedUrl ?? ""))) return null;
+  return `${embedUrl}?${new URLSearchParams(SKETCHFAB_VIEWER_OPTIONS)}`;
+}

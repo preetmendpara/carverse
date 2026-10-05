@@ -9,14 +9,15 @@
 // Firestore rules) or, for a car not yet saved, with the car.
 import { esc, toast } from "../components/layout.js";
 import { saveCar } from "../core/store.js";
-import { sketchfabFromEmbedCode, sketchfabFromUrl, modelWrite } from "../core/model-source.js";
+import { sketchfabFromEmbedCode, sketchfabFromUrl, modelWrite, sketchfabViewerUrl } from "../core/model-source.js";
 
-// Admin preview only (the public car page links to Sketchfab instead of
-// embedding it). The Sketchfab viewer needs scripts; it runs on Sketchfab's
-// own origin.
+// Used by the admin Preview and the public car page. The Sketchfab viewer
+// needs scripts; it runs on Sketchfab's own origin. The src is always built
+// from a validated embed URL with Sketchfab's documented options; no
+// fullscreen permission is given.
 export const SANDBOX = "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox";
 export const embedFrame = (url, title = "3D model") =>
-  `<iframe title="${esc(title)} (Sketchfab viewer)" src="${esc(url)}" sandbox="${SANDBOX}" allow="xr-spatial-tracking" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
+  `<iframe title="${esc(title)} (Sketchfab viewer)" src="${esc(sketchfabViewerUrl(url) || "about:blank")}" sandbox="${SANDBOX}" allow="xr-spatial-tracking" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
 
 export function modelSectionHtml(car) {
   const src = car?.modelSource;

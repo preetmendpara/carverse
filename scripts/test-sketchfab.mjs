@@ -14,6 +14,8 @@ import {
   modelWrite,
   modelView,
   embedUrlFor,
+  sketchfabViewerUrl,
+  SKETCHFAB_VIEWER_OPTIONS,
 } from "../public/app/js/core/model-source.js";
 import { uploadType } from "../server/worker.js";
 
@@ -196,16 +198,34 @@ await check("viewer stays in the page: no fullscreen button, modal or Fullscreen
   assert.ok(!/requestFullscreen|exitFullscreen|id="fs"|Fullscreen<\/button>/.test(details));
   assert.ok(!/allowfullscreen|allow="[^"]*fullscreen/.test(panel), "iframe may not go fullscreen");
 });
-await check("car page never embeds Sketchfab's player: a clean card links to the official viewer", () => {
+await check("public car page renders the Sketchfab model inline in the viewer box", () => {
   assert.ok(/modelView\(car\)/.test(details));
-  assert.ok(!/<iframe|embedFrame/.test(details), "no Sketchfab iframe on the public car page");
-  assert.ok(/View 3D on Sketchfab/.test(details));
-  assert.ok(/href="\$\{esc\(model\.sourceUrl\)\}" target="_blank" rel="noopener"/.test(details), "link goes to the validated Sketchfab page");
-  assert.ok(/getElementById\("model-credit"\)\.textContent = /.test(details), "credit is plain text");
+  assert.ok(/if \(model\.kind === "embed"\) \{\s*document\.getElementById\("viewer-wrap"\)\.innerHTML = embedFrame\(model\.url, carTitle\(car\)\);/.test(details));
+  assert.ok(/src="\$\{esc\(sketchfabViewerUrl\(url\) \|\| "about:blank"\)\}"/.test(panel), "iframe src is always built from the validated embed URL");
   assert.equal(modelWrite({ sketchfab: sketchfabFromUrl(PAGE) }).modelUrl, EMBED, "stored embed URL stays canonical");
 });
-await check("no unsupported Sketchfab UI-hiding parameters or overlay tricks remain", () => {
-  assert.ok(!/ui_controls|ui_infos|ui_animations|viewerUrl|VIEWER_OPTIONS/.test(panel + details));
+await check("viewer URL = validated embed URL + Sketchfab's no-limitation options only", () => {
+  const u = new URL(sketchfabViewerUrl(EMBED));
+  assert.equal(`${u.origin}${u.pathname}`, EMBED);
+  // Only options Sketchfab documents with "Account Limitation: None".
+  assert.deepEqual(Object.fromEntries(u.searchParams), { autostart: "1", animation_autoplay: "0", ui_stop: "0" });
+  // Premium-only options do nothing for most owners and are not sent.
+  for (const premium of ["ui_animations", "ui_infos", "ui_start", "ui_help", "ui_settings", "ui_inspector", "ui_vr", "ui_ar", "ui_fullscreen", "ui_annotations", "ui_hint", "ui_controls", "ui_watermark"])
+    assert.ok(!(premium in SKETCHFAB_VIEWER_OPTIONS), premium);
+  for (const bad of ["https://evil.com/x", `${EMBED}?x=1`, "javascript:alert(1)", PAGE, null]) assert.equal(sketchfabViewerUrl(bad), null, String(bad));
+});
+await check("no redirect as the primary action; the source link is a small secondary credit", () => {
+  assert.ok(!/View 3D on Sketchfab|viewer-card|location\.(href|assign)\s*=\s*model/.test(details));
+  assert.ok(/getElementById\("model-credit"\)\.innerHTML = `3D model on Sketchfab · <a href="\$\{esc\(model\.sourceUrl\)\}" target="_blank" rel="noopener"/.test(details));
+});
+await check("CarVerse shows no creator, avatar or person card for a Sketchfab model", () => {
+  const block = details.slice(details.indexOf('if (model.kind === "embed")'), details.indexOf("const canvas"));
+  assert.ok(!/attribution|author|avatar|authorUrl|creator/i.test(block), "no person data in the public 3D block");
+});
+await check("no CSS overlay, cropping or pointer-event tricks around the viewer", async () => {
+  const css = await read("../public/app/css/style.css");
+  const viewerCss = css.split("\n").filter((l) => /viewer/.test(l)).join("\n");
+  assert.ok(!/pointer-events|clip-path|transform:\s*scale|margin-top:\s*-|::before|::after/.test(viewerCss), viewerCss);
 });
 await check("local viewer shows only the static model: no AnimationMixer or playback", async () => {
   const viewer = await read("../public/app/js/features/viewer3d.js");
