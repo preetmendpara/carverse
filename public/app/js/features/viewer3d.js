@@ -1,4 +1,6 @@
-// Three.js GLB/GLTF viewer — rotate, zoom, pan, fullscreen, responsive.
+// Three.js GLB/GLTF viewer — rotate, zoom, pan, responsive, inside the page.
+// Static model only: the scene is shown as loaded; animations in the file are
+// never played (no animation mixer), and there are no playback controls.
 import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
 import { OrbitControls } from "https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js";

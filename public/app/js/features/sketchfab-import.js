@@ -11,10 +11,12 @@ import { esc, toast } from "../components/layout.js";
 import { saveCar } from "../core/store.js";
 import { sketchfabFromEmbedCode, sketchfabFromUrl, modelWrite } from "../core/model-source.js";
 
-// The Sketchfab viewer needs scripts; it runs on Sketchfab's own origin.
+// Admin preview only (the public car page links to Sketchfab instead of
+// embedding it). The Sketchfab viewer needs scripts; it runs on Sketchfab's
+// own origin.
 export const SANDBOX = "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox";
 export const embedFrame = (url, title = "3D model") =>
-  `<iframe title="${esc(title)} (Sketchfab viewer)" src="${esc(url)}" sandbox="${SANDBOX}" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
+  `<iframe title="${esc(title)} (Sketchfab viewer)" src="${esc(url)}" sandbox="${SANDBOX}" allow="xr-spatial-tracking" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0"></iframe>`;
 
 export function modelSectionHtml(car) {
   const src = car?.modelSource;
@@ -66,7 +68,7 @@ export function mountModelSection({ car = null } = {}) {
     }
     if (!$("sf-credit").value.trim()) $("sf-credit").value = r.attribution;
     st("");
-    $("sf-out").innerHTML = `<div style="aspect-ratio:16/9;max-width:560px">${embedFrame(r.embedUrl)}</div>
+    $("sf-out").innerHTML = `<div style="height:320px;max-width:560px">${embedFrame(r.embedUrl)}</div>
       <p class="small muted">${esc(r.attribution)} · <a href="${esc(r.sourceUrl)}" target="_blank" rel="noopener">View on Sketchfab</a></p>`;
   });
 

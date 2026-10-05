@@ -187,11 +187,30 @@ await check("save and remove go through the admin-only car write (Firestore rule
   assert.ok(/Object\.assign\(data, modelWrite\(\{ uploaded, sketchfab: modelSection\.pending\(\), remove: removeModel \}\)\);/.test(admin));
   assert.ok(/match \/cars\/\{id\}\s*\{ allow read: if true; allow write: if isAdmin\(\); \}/.test(rules));
 });
-await check("pasted HTML is never inserted: preview and page build their own sandboxed iframe", () => {
+await check("pasted HTML is never inserted: the admin preview builds its own sandboxed iframe", () => {
   assert.ok(!/innerHTML\s*=\s*[^;]*\$\("sf-code"\)\.value/.test(panel));
   assert.ok(/embedFrame\(r\.embedUrl\)/.test(panel));
   assert.ok(/sandbox="\$\{SANDBOX\}"/.test(panel));
-  assert.ok(/embedFrame\(model\.url\)/.test(details) && /modelView\(car\)/.test(details));
+});
+await check("viewer stays in the page: no fullscreen button, modal or Fullscreen API", () => {
+  assert.ok(!/requestFullscreen|exitFullscreen|id="fs"|Fullscreen<\/button>/.test(details));
+  assert.ok(!/allowfullscreen|allow="[^"]*fullscreen/.test(panel), "iframe may not go fullscreen");
+});
+await check("car page never embeds Sketchfab's player: a clean card links to the official viewer", () => {
+  assert.ok(/modelView\(car\)/.test(details));
+  assert.ok(!/<iframe|embedFrame/.test(details), "no Sketchfab iframe on the public car page");
+  assert.ok(/View 3D on Sketchfab/.test(details));
+  assert.ok(/href="\$\{esc\(model\.sourceUrl\)\}" target="_blank" rel="noopener"/.test(details), "link goes to the validated Sketchfab page");
+  assert.ok(/getElementById\("model-credit"\)\.textContent = /.test(details), "credit is plain text");
+  assert.equal(modelWrite({ sketchfab: sketchfabFromUrl(PAGE) }).modelUrl, EMBED, "stored embed URL stays canonical");
+});
+await check("no unsupported Sketchfab UI-hiding parameters or overlay tricks remain", () => {
+  assert.ok(!/ui_controls|ui_infos|ui_animations|viewerUrl|VIEWER_OPTIONS/.test(panel + details));
+});
+await check("local viewer shows only the static model: no AnimationMixer or playback", async () => {
+  const viewer = await read("../public/app/js/features/viewer3d.js");
+  assert.ok(!/AnimationMixer|\.clipAction\(|gltf\.animations/.test(viewer));
+  assert.ok(/OrbitControls/.test(viewer) && /enablePan = true/.test(viewer));
 });
 await check("no Sketchfab API, token, download or import route remains", async () => {
   assert.ok(!existsSync(new URL("../server/sketchfab", import.meta.url)));

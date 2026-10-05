@@ -7,7 +7,6 @@ import { mountChatbot } from "../features/chatbot.js";
 import { fallbackCarById } from "../data/fallback-cars.js";
 import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.js";
 import { modelView } from "../core/model-source.js";
-import { embedFrame } from "../features/sketchfab-import.js";
 
 (async function init() {
   await renderLayout({ base: "../", active: "Cars" });
@@ -127,7 +126,6 @@ import { embedFrame } from "../features/sketchfab-import.js";
           <h2>3D model</h2>
           <div id="viewer-wrap">
             <canvas id="viewer-canvas"></canvas>
-            <div class="viewer-bar"><button class="btn btn-sm" id="fs">Fullscreen</button></div>
             <div class="viewer-hint">Drag to rotate · scroll to zoom · right-drag to pan</div>
           </div>
           <p class="small muted" id="model-credit"></p>
@@ -213,7 +211,9 @@ import { embedFrame } from "../features/sketchfab-import.js";
   });
 
   // 3D viewer only when a model exists in Firestore, and only for members.
-  // A Sketchfab embed uses Sketchfab's official viewer; anything else, ours.
+  // Models we host open in our own clean viewer. A Sketchfab model is NOT
+  // iframed here (its player brings media controls we cannot remove): the
+  // section shows a clean card that opens the official Sketchfab viewer.
   const model = modelView(car);
   if (model) {
     const section = document.getElementById("viewer-section");
@@ -224,19 +224,20 @@ import { embedFrame } from "../features/sketchfab-import.js";
       return;
     }
     if (model.kind === "embed") {
-      // Only a validated https://sketchfab.com/models/{uid}/embed URL gets here.
-      document.getElementById("viewer-wrap").innerHTML = embedFrame(model.url);
-      document.getElementById("model-credit").innerHTML = `3D model: ${esc(model.attribution)} · <a href="${esc(model.sourceUrl)}" target="_blank" rel="noopener" style="text-decoration:underline">View on Sketchfab</a>`;
+      const cover = carCover(car);
+      document.getElementById("viewer-wrap").innerHTML = `<div class="viewer-card">
+          ${cover ? `<img src="${esc(cover)}" alt="${esc(carTitle(car))}" loading="lazy">` : ""}
+          <div class="viewer-card-body">
+            <p>An interactive 3D model of this car is available on Sketchfab.</p>
+            <a class="btn btn-primary" href="${esc(model.sourceUrl)}" target="_blank" rel="noopener">View 3D on Sketchfab</a>
+          </div>
+        </div>`;
+      document.getElementById("model-credit").textContent = `3D model: ${model.attribution}. Opens Sketchfab's own viewer in a new tab.`;
       return;
     }
     const canvas = document.getElementById("viewer-canvas");
     canvas.addEventListener("model-error", () => (section.style.display = "none"));
     const { initViewer } = await import("../features/viewer3d.js");
     initViewer(canvas, model.url);
-    document.getElementById("fs").addEventListener("click", () => {
-      const wrap = document.getElementById("viewer-wrap");
-      if (document.fullscreenElement) document.exitFullscreen();
-      else wrap.requestFullscreen?.();
-    });
   }
 })();

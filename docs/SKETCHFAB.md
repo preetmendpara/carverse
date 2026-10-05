@@ -16,7 +16,7 @@ Admin → edit car → **3D model**:
 modelSource = { type: "sketchfab-embed", embedUrl, sourceUrl, attribution }
 ```
 
-**Preview** shows the result in a sandboxed Sketchfab viewer. **Save** writes
+**Preview** (admin only) shows the result in a sandboxed Sketchfab viewer. **Save** writes
 it to the car straight away (or, for a car not saved yet, with the car); this
 is the same admin-only Firestore write as every other car edit. Upload, embed
 and **Remove** each replace the previous model.
@@ -35,11 +35,12 @@ and **Remove** each replace the previous model.
 - The credit line Sketchfab includes in its embed code is kept as plain text
   (tags and `<`/`>` removed, 200 characters max). For a pasted URL, the admin
   can type the credit.
-- The car page iframes a model only when `modelUrl` is exactly
-  `https://sketchfab.com/models/{uid}/embed`, with
-  `sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"`,
-  and shows the credit with a "View on Sketchfab" link underneath. A local
-  model must be a path on this site (`/media/…`) and opens in the built-in
-  Three.js viewer. No model: the 3D section stays hidden.
+- The car page never embeds Sketchfab's player (it forces media controls we
+  cannot remove). A local model (`/media/…` only) opens in the built-in
+  Three.js viewer: rotate, zoom, pan, no animation or fullscreen. A Sketchfab
+  model shows a clean card with a "View 3D on Sketchfab" button that opens the
+  official viewer in a new tab, and the credit as plain text. The sandboxed
+  Sketchfab iframe is used only for the admin's Preview. No model: the 3D
+  section stays hidden.
 - Uploads: browsers send `.glb`/`.gltf` with an empty type, so for the
   `3d-models` folder the Worker takes the type from the extension.

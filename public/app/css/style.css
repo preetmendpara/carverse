@@ -153,9 +153,10 @@ textarea { min-height: 110px; resize: vertical; }
 .feature-list li { color: var(--muted); font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; }
 
 /* ----------------------------- 3d viewer ------------------------------ */
-#viewer-wrap { position: relative; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #060606; }
-#viewer-canvas { width: 100%; height: 420px; display: block; }
-.viewer-bar { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; }
+/* The 3D viewer is a fixed-height card in the page, never fullscreen. The
+   Sketchfab iframe and our canvas both fill it. */
+#viewer-wrap { position: relative; height: clamp(280px, 56vw, 440px); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #060606; }
+#viewer-canvas, #viewer-wrap iframe { width: 100%; height: 100%; display: block; border: 0; }
 .viewer-hint { position: absolute; bottom: 10px; left: 12px; font-size: 12px; color: var(--muted); }
 
 /* ------------------------------- compare ------------------------------ */
@@ -998,3 +999,7 @@ input, select, textarea { border-radius: 0; }
 .cmp-assess.is-winner { border-color: var(--text, currentColor); }
 .cmp-facts { margin: 4px 0 8px; padding-left: 18px; }
 .cmp-result { margin-top: 20px; }
+/* Sketchfab model on the car page: a clean card linking to Sketchfab's own viewer. */
+.viewer-card { position: relative; height: 100%; display: grid; place-items: center; }
+.viewer-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; }
+.viewer-card-body { position: relative; text-align: center; padding: 16px; }
