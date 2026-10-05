@@ -6,6 +6,7 @@ import * as F from "../core/car-fields.js";
 import { mountChatbot } from "../features/chatbot.js";
 import { fallbackCarById } from "../data/fallback-cars.js";
 import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.js";
+import { modelView } from "../core/model-source.js";
 
 (async function init() {
   await renderLayout({ base: "../", active: "Cars" });
@@ -128,6 +129,7 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
             <div class="viewer-bar"><button class="btn btn-sm" id="fs">Fullscreen</button></div>
             <div class="viewer-hint">Drag to rotate · scroll to zoom · right-drag to pan</div>
           </div>
+          <p class="small muted" id="model-credit"></p>
         </div>
         ${car.description ? `<div style="margin-top:24px"><h2>Description</h2><p>${esc(car.description)}</p></div>` : ""}
         ${
@@ -209,8 +211,10 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
     if (await requireUser("../")) location.href = e.currentTarget.href;
   });
 
-  // 3D viewer only when a model URL exists in Firestore, and only for members.
-  if (car.modelUrl) {
+  // 3D viewer only when a model exists in Firestore, and only for members.
+  // A Sketchfab embed uses Sketchfab's official viewer; anything else, ours.
+  const model = modelView(car);
+  if (model) {
     const section = document.getElementById("viewer-section");
     section.style.display = "block";
     if (!(await currentUser())) {
@@ -218,10 +222,20 @@ import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.
         `<div class="empty">Sign in to view the 3D walkaround. <a href="login.html?next=${encodeURIComponent(location.pathname + location.search)}" style="text-decoration:underline">Sign in</a></div>`;
       return;
     }
+    const c = model.credit;
+    if (c) {
+      const link = (text, url) => (url ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:underline">${esc(text)}</a>` : esc(text));
+      document.getElementById("model-credit").innerHTML = `3D model: "${link(c.title, c.titleUrl)}" by ${link(c.author, c.authorUrl)} on Sketchfab${c.license ? `, ${link(c.license, c.licenseUrl)}` : ""}.`;
+    }
+    if (model.kind === "embed") {
+      const wrap = document.getElementById("viewer-wrap");
+      wrap.innerHTML = `<iframe title="${esc(c?.title || "3D model")} (Sketchfab viewer)" src="${esc(model.url)}" style="width:100%;height:100%;border:0" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+      return;
+    }
     const canvas = document.getElementById("viewer-canvas");
     canvas.addEventListener("model-error", () => (section.style.display = "none"));
     const { initViewer } = await import("../features/viewer3d.js");
-    initViewer(canvas, car.modelUrl);
+    initViewer(canvas, model.url);
     document.getElementById("fs").addEventListener("click", () => {
       const wrap = document.getElementById("viewer-wrap");
       if (document.fullscreenElement) document.exitFullscreen();

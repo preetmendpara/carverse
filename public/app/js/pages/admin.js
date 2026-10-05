@@ -15,6 +15,8 @@ import { provenanceText, effectiveFields } from "../core/car-fields.js";
 import { NORMALIZED_FIELDS, fieldView, buildNormalizedWrite, reconcileReview, buildBasicWrite } from "../core/admin-fields.js";
 import { initAnimations } from "../features/animate.js";
 import { photoListingPanel, mountPhotoListing } from "../features/photo-listing.js";
+import { modelSectionHtml, mountModelSection } from "../features/sketchfab-import.js";
+import { modelWrite } from "../core/model-source.js";
 
 initTheme();
 initAnimations();
@@ -451,11 +453,7 @@ async function carForm(car = null, brandList = null) {
       ).join("")}
 
       <div class="divider"></div>
-      <h3>3D model (GLB / GLTF)</h3>
-      <div class="field">
-        <input type="file" id="model-file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json">
-        ${car?.modelUrl ? `<p class="small">Current model uploaded. <button type="button" class="btn btn-sm btn-ghost" id="rm-model">Remove</button></p>` : ""}
-      </div>
+      ${modelSectionHtml(car)}
 
       <div class="divider"></div>
       <div class="grid-2">
@@ -553,6 +551,7 @@ async function carForm(car = null, brandList = null) {
 
   const photoAi = mountPhotoListing({ brands: brandsAvailable });
 
+  const modelSection = mountModelSection();
   let removeModel = false;
   document.getElementById("rm-model")?.addEventListener("click", (e) => {
     removeModel = true;
@@ -618,16 +617,16 @@ async function carForm(car = null, brandList = null) {
       }
 
       // NB: not "model" — that id belongs to the car's Model text field.
+      // One model per car: an uploaded file, a Sketchfab import/embed, or
+      // removal. Nothing changes when the admin did none of these.
       const modelFile = document.getElementById("model-file").files[0];
+      let uploaded = null;
       if (modelFile) {
         st.textContent = "Uploading 3D model…";
         const up = await store.uploadFile("3d-models", modelFile);
-        data.modelUrl = up.url;
-        data.modelPath = up.path;
-      } else if (removeModel) {
-        data.modelUrl = null;
-        data.modelPath = null;
+        uploaded = { url: up.url, path: up.path };
       }
+      Object.assign(data, modelWrite({ uploaded, sketchfab: modelSection.pending(), remove: removeModel }));
 
       st.textContent = "Saving car…";
       await store.saveCar(data, car?.id);

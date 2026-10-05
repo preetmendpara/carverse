@@ -353,3 +353,9 @@ export function analysePhotos(files) {
   files.forEach((f) => body.append("photos", f));
   return adminAi("/api/photo-listing", body, true);
 }
+
+/* ------------------------------ Sketchfab ------------------------------ */
+// The Worker talks to Sketchfab (official API, token server-side) and stores
+// any download in R2. The browser only sends the model link.
+export const sketchfabPreview = (url) => adminAi("/api/admin/sketchfab/preview", { url });
+export const sketchfabImport = (url, mode) => adminAi("/api/admin/sketchfab/import", { url, mode });

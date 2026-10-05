@@ -8,6 +8,7 @@ import { handleMatchRequest } from "./match/api.js";
 import { handleChatRequest } from "./chat/api.js";
 import { handleCompareAi } from "./compare/api.js";
 import { handlePhotoListing } from "./listing/api.js";
+import { handleSketchfabPreview, handleSketchfabImport } from "./sketchfab/api.js";
 
 // Mirrors the folder allowlist the admin panel uploads into.
 const FOLDERS = new Set([
@@ -22,6 +23,16 @@ const FOLDERS = new Set([
 
 const MAX_BYTES = 60 * 1024 * 1024;
 const ALLOWED_TYPES = /^(image\/(jpeg|png|webp|gif|avif|svg\+xml)|model\/gltf(-binary|\+json))$/;
+// Browsers usually send .glb/.gltf with an empty or generic type, so every 3D
+// upload failed as "unsupported". For the 3d-models folder only, the type
+// comes from the extension instead.
+const MODEL_TYPES = { glb: "model/gltf-binary", gltf: "model/gltf+json" };
+export function uploadType(file, folder) {
+  if (folder === "3d-models" && (!file.type || file.type === "application/octet-stream")) {
+    return MODEL_TYPES[String(file.name || "").split(".").pop().toLowerCase()] || file.type;
+  }
+  return file.type;
+}
 
 const bad = (status, message) =>
   new Response(JSON.stringify({ error: message }), {
@@ -64,7 +75,8 @@ async function handleUpload(request, env) {
   if (!(file instanceof File)) return bad(400, "No file provided.");
   if (!FOLDERS.has(folder)) return bad(400, `Unknown folder "${folder}".`);
   if (file.size > MAX_BYTES) return bad(413, "File is larger than 60 MB.");
-  if (!ALLOWED_TYPES.test(file.type)) return bad(415, `Unsupported file type "${file.type}".`);
+  const type = uploadType(file, folder);
+  if (!ALLOWED_TYPES.test(type)) return bad(415, `Unsupported file type "${type || "unknown"}".`);
 
   // Folder comes from the allowlist and the name is stripped, so the key can
   // never escape the prefix.
@@ -72,7 +84,7 @@ async function handleUpload(request, env) {
   const key = `${folder}/${Date.now()}_${name}`;
 
   await env.MEDIA.put(key, file.stream(), {
-    httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" },
+    httpMetadata: { contentType: type, cacheControl: "public, max-age=31536000, immutable" },
   });
 
   return Response.json({ url: `/media/${key}`, path: key });
@@ -184,6 +196,15 @@ const adminAiDeps = {
   GeminiError,
 };
 
+// Sketchfab import: admin-only. The API token stays in the Worker secret
+// SKETCHFAB_API_TOKEN; imported models go to the same R2 bucket as uploads.
+const sketchfabDeps = {
+  admin: adminUser,
+  fetch: (...a) => fetch(...a),
+  bucket: (env) => env.MEDIA,
+  now: () => Date.now(),
+};
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -193,6 +214,8 @@ export default {
     if (url.pathname === "/api/compare-ai") return handleCompareAi(request, env, aiDeps);
     if (url.pathname === "/api/inquiry") return handleInquiry(request, env);
     if (url.pathname === "/api/photo-listing") return handlePhotoListing(request, env, adminAiDeps);
+    if (url.pathname === "/api/admin/sketchfab/preview") return handleSketchfabPreview(request, env, sketchfabDeps);
+    if (url.pathname === "/api/admin/sketchfab/import") return handleSketchfabImport(request, env, sketchfabDeps);
     if (url.pathname.startsWith("/media/")) return serveMedia(url, env);
     return env.ASSETS.fetch(request);
   },
