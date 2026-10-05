@@ -7,6 +7,7 @@ import { mountChatbot } from "../features/chatbot.js";
 import { fallbackCarById } from "../data/fallback-cars.js";
 import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.js";
 import { modelView } from "../core/model-source.js";
+import { embedFrame } from "../features/sketchfab-import.js";
 
 (async function init() {
   await renderLayout({ base: "../", active: "Cars" });
@@ -222,14 +223,10 @@ import { modelView } from "../core/model-source.js";
         `<div class="empty">Sign in to view the 3D walkaround. <a href="login.html?next=${encodeURIComponent(location.pathname + location.search)}" style="text-decoration:underline">Sign in</a></div>`;
       return;
     }
-    const c = model.credit;
-    if (c) {
-      const link = (text, url) => (url ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:underline">${esc(text)}</a>` : esc(text));
-      document.getElementById("model-credit").innerHTML = `3D model: "${link(c.title, c.titleUrl)}" by ${link(c.author, c.authorUrl)} on Sketchfab${c.license ? `, ${link(c.license, c.licenseUrl)}` : ""}.`;
-    }
     if (model.kind === "embed") {
-      const wrap = document.getElementById("viewer-wrap");
-      wrap.innerHTML = `<iframe title="${esc(c?.title || "3D model")} (Sketchfab viewer)" src="${esc(model.url)}" style="width:100%;height:100%;border:0" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+      // Only a validated https://sketchfab.com/models/{uid}/embed URL gets here.
+      document.getElementById("viewer-wrap").innerHTML = embedFrame(model.url);
+      document.getElementById("model-credit").innerHTML = `3D model: ${esc(model.attribution)} · <a href="${esc(model.sourceUrl)}" target="_blank" rel="noopener" style="text-decoration:underline">View on Sketchfab</a>`;
       return;
     }
     const canvas = document.getElementById("viewer-canvas");

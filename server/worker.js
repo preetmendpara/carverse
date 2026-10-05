@@ -8,7 +8,6 @@ import { handleMatchRequest } from "./match/api.js";
 import { handleChatRequest } from "./chat/api.js";
 import { handleCompareAi } from "./compare/api.js";
 import { handlePhotoListing } from "./listing/api.js";
-import { handleSketchfabPreview, handleSketchfabImport } from "./sketchfab/api.js";
 
 // Mirrors the folder allowlist the admin panel uploads into.
 const FOLDERS = new Set([
@@ -196,15 +195,6 @@ const adminAiDeps = {
   GeminiError,
 };
 
-// Sketchfab import: admin-only. The API token stays in the Worker secret
-// SKETCHFAB_API_TOKEN; imported models go to the same R2 bucket as uploads.
-const sketchfabDeps = {
-  admin: adminUser,
-  fetch: (...a) => fetch(...a),
-  bucket: (env) => env.MEDIA,
-  now: () => Date.now(),
-};
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -214,8 +204,6 @@ export default {
     if (url.pathname === "/api/compare-ai") return handleCompareAi(request, env, aiDeps);
     if (url.pathname === "/api/inquiry") return handleInquiry(request, env);
     if (url.pathname === "/api/photo-listing") return handlePhotoListing(request, env, adminAiDeps);
-    if (url.pathname === "/api/admin/sketchfab/preview") return handleSketchfabPreview(request, env, sketchfabDeps);
-    if (url.pathname === "/api/admin/sketchfab/import") return handleSketchfabImport(request, env, sketchfabDeps);
     if (url.pathname.startsWith("/media/")) return serveMedia(url, env);
     return env.ASSETS.fetch(request);
   },

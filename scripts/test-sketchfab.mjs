@@ -1,26 +1,24 @@
 #!/usr/bin/env node
-// Sketchfab 3D model import: UID parsing, admin-only routes, metadata,
-// download vs embed, SSRF/size/type limits, R2 storage, the car fields the
-// admin form saves, and that no secret reaches the browser. Fake network and
-// fake R2 only; nothing real is called.
+// 3D models: Sketchfab embeds (no API, no download) and local uploads.
+// Pure checks of public/app/js/core/model-source.js, plus wiring and a scan
+// that no Sketchfab API, token or download code remains. No network.
 //   node scripts/test-sketchfab.mjs
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import {
   parseSketchfabUid,
-  isAllowedDownloadUrl,
-  normalizeMetadata,
-  unzipGltf,
-  safeEntryPath,
-  sceneFile,
-  MAX_DOWNLOAD_BYTES,
-} from "../server/sketchfab/sketchfab.js";
-import { handleSketchfabPreview, handleSketchfabImport } from "../server/sketchfab/api.js";
-import { modelWrite, modelView } from "../public/app/js/core/model-source.js";
+  sketchfabFromEmbedCode,
+  sketchfabFromUrl,
+  sketchfabSource,
+  modelWrite,
+  modelView,
+  embedUrlFor,
+} from "../public/app/js/core/model-source.js";
 import { uploadType } from "../server/worker.js";
 
 globalThis.fetch = () => {
-  throw new Error("real network used in a test");
+  throw new Error("network used in a test");
 };
 let passed = 0;
 const check = async (name, fn) => {
@@ -29,382 +27,199 @@ const check = async (name, fn) => {
   console.log(`  ok  ${name}`);
 };
 
-const UID = "0123456789abcdef0123456789abcdef";
+const UID = "94b24a60dc1b48248de50bf087c0f042";
+const EMBED = `https://sketchfab.com/models/${UID}/embed`;
 const PAGE = `https://sketchfab.com/3d-models/red-sports-car-${UID}`;
-const TOKEN = "sketchfab-test-token-SECRET";
-const S3 = "https://sketchfab-prod-media.s3.amazonaws.com/archives/x.zip?sig=1";
+// What Sketchfab's "Embed" button gives (shape of the official snippet).
+const SNIPPET = `<div class="sketchfab-embed-wrapper"> <iframe title="Red Sports Car" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/${UID}/embed?autostart=1&amp;ui_theme=dark"> </iframe> <p style="font-size: 13px;"> <a href="${PAGE}?utm_medium=embed&utm_campaign=share-popup" target="_blank" rel="nofollow">Red Sports Car</a> by <a href="https://sketchfab.com/jane?utm_medium=embed" target="_blank" rel="nofollow">Jane Modeller</a> on <a href="https://sketchfab.com?utm_medium=embed" target="_blank" rel="nofollow">Sketchfab</a></p></div>`;
 
-/* ------------------------------ zip builder ---------------------------- */
-const enc = new TextEncoder();
-async function deflateRaw(bytes) {
-  const out = await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer();
-  return new Uint8Array(out);
-}
-async function zip(entries, { deflate = true } = {}) {
-  const parts = [];
-  const central = [];
-  let offset = 0;
-  for (const [name, content] of entries) {
-    const data = typeof content === "string" ? enc.encode(content) : content;
-    const comp = deflate ? await deflateRaw(data) : data;
-    const n = enc.encode(name);
-    const local = new Uint8Array(30 + n.length);
-    const lv = new DataView(local.buffer);
-    lv.setUint32(0, 0x04034b50, true);
-    lv.setUint16(8, deflate ? 8 : 0, true);
-    lv.setUint32(18, comp.length, true);
-    lv.setUint32(22, data.length, true);
-    lv.setUint16(26, n.length, true);
-    local.set(n, 30);
-    const cd = new Uint8Array(46 + n.length);
-    const cv = new DataView(cd.buffer);
-    cv.setUint32(0, 0x02014b50, true);
-    cv.setUint16(10, deflate ? 8 : 0, true);
-    cv.setUint32(20, comp.length, true);
-    cv.setUint32(24, data.length, true);
-    cv.setUint16(28, n.length, true);
-    cv.setUint32(42, offset, true);
-    cd.set(n, 46);
-    parts.push(local, comp);
-    central.push(cd);
-    offset += local.length + comp.length;
-  }
-  const cdSize = central.reduce((s, c) => s + c.length, 0);
-  const end = new Uint8Array(22);
-  const ev = new DataView(end.buffer);
-  ev.setUint32(0, 0x06054b50, true);
-  ev.setUint16(8, entries.length, true);
-  ev.setUint16(10, entries.length, true);
-  ev.setUint32(12, cdSize, true);
-  ev.setUint32(16, offset, true);
-  return new Uint8Array(await new Blob([...parts, ...central, end]).arrayBuffer());
-}
-const GLB = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0, 12, 0, 0, 0]);
-
-/* --------------------------------- fakes ------------------------------- */
-const META = {
-  uid: UID,
-  name: "Red Sports Car",
-  isDownloadable: true,
-  user: { displayName: "Jane Modeller", username: "jane", profileUrl: "https://sketchfab.com/jane" },
-  license: { label: "CC Attribution", url: "https://creativecommons.org/licenses/by/4.0/", requirements: "Author must be credited." },
-  thumbnails: { images: [{ url: "https://media.sketchfab.com/models/x/thumb-1920.jpeg", width: 1920 }, { url: "https://media.sketchfab.com/models/x/thumb-720.jpeg", width: 720 }, { url: "https://evil.example/t.jpg", width: 500 }] },
-};
-const jsonRes = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-const bytesRes = (bytes, headers = {}) => new Response(bytes, { status: 200, headers });
-
-function setup({ meta = META, links = { gltf: { url: S3, size: 1000 } }, file = null, admin = true, env = { SKETCHFAB_API_TOKEN: TOKEN }, fetchOverride = null } = {}) {
-  const calls = [];
-  const stored = new Map();
-  const deps = {
-    admin: async () => (admin ? { uid: "admin-1", idToken: "t" } : null),
-    bucket: () => ({ put: async (key, body, opts) => stored.set(key, { body: new Uint8Array(body), type: opts.httpMetadata.contentType }) }),
-    now: () => 1790000000000,
-    fetch: async (url, init = {}) => {
-      calls.push({ url: String(url), init });
-      if (fetchOverride) return fetchOverride(String(url), init);
-      if (String(url) === `https://api.sketchfab.com/v3/models/${UID}`) return meta ? jsonRes(meta) : jsonRes({ detail: "Not found" }, 404);
-      if (String(url) === `https://api.sketchfab.com/v3/models/${UID}/download`) return jsonRes(links);
-      return file || bytesRes(new Uint8Array(0));
-    },
-  };
-  return { deps, calls, stored, env };
-}
-const post = (body, method = "POST") =>
-  new Request("https://x/api/admin/sketchfab/import", method === "POST" ? { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : { method });
-
-/* --------------------------------- tests ------------------------------- */
-console.log("URL / UID parsing");
-await check("model page, /models/{uid}, embed URL, www and bare UID all resolve", () => {
-  for (const u of [PAGE, `https://sketchfab.com/models/${UID}`, `https://sketchfab.com/models/${UID}/embed`, `https://www.sketchfab.com/3d-models/x-${UID}?utm=1`, UID, ` ${UID.toUpperCase()} `])
+console.log("UID parsing and normalised embed URL");
+await check("model page, /models/{uid}, embed URL and www resolve to the UID", () => {
+  for (const u of [PAGE, `https://sketchfab.com/models/${UID}`, EMBED, `https://www.sketchfab.com/3d-models/x-${UID}?a=1`, `https://sketchfab.com/models/${UID.toUpperCase()}/embed`])
     assert.equal(parseSketchfabUid(u), UID, u);
 });
-await check("anything else is rejected", () => {
-  for (const u of [
-    "",
-    null,
-    "not a url",
-    `http://sketchfab.com/3d-models/x-${UID}`,
-    `https://evil.com/3d-models/x-${UID}`,
-    `https://sketchfab.com.evil.com/3d-models/x-${UID}`,
-    `https://sketchfab.com:8443/models/${UID}`,
-    `https://user:pw@sketchfab.com/models/${UID}`,
-    "https://sketchfab.com/jane",
-    "https://sketchfab.com/3d-models/no-uid-here",
-    `https://sketchfab.com/models/${UID.slice(1)}`,
+await check("host is case-insensitive", () => {
+  assert.equal(parseSketchfabUid(`https://SKETCHFAB.COM/3d-models/x-${UID}`), UID);
+  assert.equal(parseSketchfabUid(`HTTPS://WWW.Sketchfab.com/models/${UID}`), UID);
+});
+await check("embed URL is rebuilt from the UID, query string dropped", () => {
+  assert.equal(embedUrlFor(UID), EMBED);
+  assert.equal(sketchfabFromEmbedCode(SNIPPET).embedUrl, EMBED);
+  assert.equal(sketchfabFromUrl(PAGE).embedUrl, EMBED);
+});
+await check("non-model Sketchfab pages give no UID", () => {
+  for (const u of ["https://sketchfab.com/jane", "https://sketchfab.com/3d-models/no-uid", `https://sketchfab.com/models/${UID.slice(1)}`, `https://sketchfab.com/models/${UID}/embed/extra`, `https://sketchfab.com/3d-models/x-${UID}/more`])
+    assert.equal(parseSketchfabUid(u), null, u);
+});
+
+console.log("Sketchfab URL");
+await check("valid model URL gives embed URL, source page and default credit", () => {
+  const r = sketchfabFromUrl(PAGE);
+  assert.deepEqual(r, { ok: true, uid: UID, embedUrl: EMBED, sourceUrl: PAGE, attribution: "Model on Sketchfab" });
+  assert.equal(sketchfabFromUrl(PAGE, "Red Sports Car by Jane (CC BY 4.0)").attribution, "Red Sports Car by Jane (CC BY 4.0)");
+  assert.equal(sketchfabFromUrl(`https://sketchfab.com/models/${UID}`).sourceUrl, `https://sketchfab.com/3d-models/${UID}`);
+});
+
+console.log("Embed code");
+await check("official embed snippet: one iframe, normalised URL, credit as plain text, source link", () => {
+  const r = sketchfabFromEmbedCode(SNIPPET);
+  assert.equal(r.ok, true);
+  assert.equal(r.uid, UID);
+  assert.equal(r.attribution, "Red Sports Car by Jane Modeller on Sketchfab");
+  assert.equal(r.sourceUrl, PAGE);
+});
+await check("a bare iframe works, credit falls back to its title", () => {
+  const r = sketchfabFromEmbedCode(`<iframe title="Blue Coupe" src='${EMBED}'></iframe>`);
+  assert.equal(r.ok, true);
+  assert.equal(r.attribution, "Blue Coupe on Sketchfab");
+  assert.equal(r.sourceUrl, `https://sketchfab.com/3d-models/${UID}`);
+});
+await check("credit text cannot carry markup or scripts", () => {
+  const r = sketchfabFromEmbedCode(`<iframe src="${EMBED}"></iframe><p><script>alert(1)</script><img src=x onerror=alert(1)>Car &lt;b&gt;x&lt;/b&gt; by <a href="javascript:alert(1)">Eve</a></p>`);
+  assert.equal(r.ok, true);
+  assert.ok(!/[<>]/.test(r.attribution), r.attribution);
+  assert.equal(r.sourceUrl, `https://sketchfab.com/3d-models/${UID}`, "a javascript: link is never used");
+});
+
+console.log("Rejections");
+const bad = (code) => {
+  const r = sketchfabFromEmbedCode(code);
+  assert.equal(r.ok, false, code);
+  assert.ok(r.error);
+};
+await check("invalid hosts are rejected", () => {
+  for (const host of ["evil.com", "sketchfab.com.evil.com", "evilsketchfab.com", "sketchfab.co", "static.sketchfab.com"]) {
+    bad(`<iframe src="https://${host}/models/${UID}/embed"></iframe>`);
+    assert.equal(sketchfabFromUrl(`https://${host}/3d-models/x-${UID}`).ok, false, host);
+  }
+  for (const u of [`https://sketchfab.com:8443/models/${UID}/embed`, `https://u:p@sketchfab.com/models/${UID}/embed`, `//sketchfab.com/models/${UID}/embed`]) assert.equal(parseSketchfabUid(u), null, u);
+});
+await check("javascript:, data:, blob:, http:, file: and relative sources are rejected", () => {
+  for (const src of [
     "javascript:alert(1)",
-  ])
-    assert.equal(parseSketchfabUid(u), null, String(u));
-});
-
-console.log("Admin authentication");
-await check("preview and import refuse non-admins without calling Sketchfab", async () => {
-  for (const h of [handleSketchfabPreview, handleSketchfabImport]) {
-    const s = setup({ admin: false });
-    const res = await h(post({ url: PAGE, mode: "embed" }), s.env, s.deps);
-    assert.equal(res.status, 401);
-    assert.equal(s.calls.length, 0);
+    `javascript://sketchfab.com/models/${UID}/embed%0aalert(1)`,
+    `data:text/html,<script>alert(1)</script>`,
+    `blob:https://sketchfab.com/${UID}`,
+    `http://sketchfab.com/models/${UID}/embed`,
+    `file:///models/${UID}/embed`,
+    `/models/${UID}/embed`,
+    ` jAvAsCrIpT:alert(1)`,
+  ]) {
+    bad(`<iframe src="${src}"></iframe>`);
+    assert.equal(sketchfabFromUrl(src).ok, false, src);
   }
 });
-await check("GET is refused", async () => {
-  const s = setup();
-  assert.equal((await handleSketchfabPreview(post(null, "GET"), s.env, s.deps)).status, 405);
+await check("arbitrary iframes and non-embed Sketchfab iframes are rejected", () => {
+  bad(`<iframe src="https://www.youtube.com/embed/abc"></iframe>`);
+  bad(`<iframe src="${PAGE}"></iframe>`, "a model page is not an embed");
+  bad(`<iframe src="https://sketchfab.com/playlists/abc/embed"></iframe>`);
+  bad(`<iframe srcdoc="<script>alert(1)</script>"></iframe>`);
+  bad(`<iframe src="${EMBED}"></iframe><iframe src="https://evil.com"></iframe>`);
+  bad(`<script src="${EMBED}"></script>`);
+  bad("");
+  bad("x".repeat(6000));
 });
 
-console.log("Invalid Sketchfab URL");
-await check("a non-Sketchfab URL is 400 and nothing is fetched (no open proxy)", async () => {
-  for (const url of ["https://example.com/model.glb", "http://169.254.169.254/latest/meta-data", "file:///etc/passwd", S3]) {
-    const s = setup();
-    const res = await handleSketchfabImport(post({ url, mode: "download" }), s.env, s.deps);
-    assert.equal(res.status, 400, url);
-    assert.equal(s.calls.length, 0, url);
-  }
+console.log("Stored data");
+await check("modelSource serialises to exactly type, embedUrl, sourceUrl, attribution", () => {
+  const src = sketchfabSource(sketchfabFromEmbedCode(SNIPPET));
+  assert.deepEqual(Object.keys(src), ["type", "embedUrl", "sourceUrl", "attribution"]);
+  assert.deepEqual(src, { type: "sketchfab-embed", embedUrl: EMBED, sourceUrl: PAGE, attribution: "Red Sports Car by Jane Modeller on Sketchfab" });
+  assert.equal(JSON.parse(JSON.stringify(src)).embedUrl, EMBED);
 });
-await check("an unknown mode is 400", async () => {
-  const s = setup();
-  assert.equal((await handleSketchfabImport(post({ url: PAGE, mode: "steal" }), s.env, s.deps)).status, 400);
+await check("raw HTML is never stored: the write holds only the normalised URL and plain text", () => {
+  const w = modelWrite({ sketchfab: sketchfabFromEmbedCode(SNIPPET) });
+  assert.deepEqual(w, { modelUrl: EMBED, modelPath: null, modelSource: { type: "sketchfab-embed", embedUrl: EMBED, sourceUrl: PAGE, attribution: "Red Sports Car by Jane Modeller on Sketchfab" } });
+  const text = JSON.stringify(w);
+  for (const bit of ["<", ">", "iframe", "autostart", "allowfullscreen", "style="]) assert.ok(!text.includes(bit), bit);
 });
-
-console.log("Metadata");
-await check("preview returns title, author, safe thumbnail, license, downloadable", async () => {
-  const s = setup();
-  const res = await handleSketchfabPreview(post({ url: PAGE }), s.env, s.deps);
-  assert.equal(res.status, 200);
-  const m = await res.json();
-  assert.equal(m.title, "Red Sports Car");
-  assert.equal(m.author, "Jane Modeller");
-  assert.equal(m.authorUrl, "https://sketchfab.com/jane");
-  assert.equal(m.thumbnail, "https://media.sketchfab.com/models/x/thumb-720.jpeg");
-  assert.deepEqual(m.license, { label: "CC Attribution", url: "https://creativecommons.org/licenses/by/4.0/", requirements: "Author must be credited." });
-  assert.equal(m.isDownloadable, true);
-  assert.equal(m.canDownload, true);
-  assert.equal(m.embedUrl, `https://sketchfab.com/models/${UID}/embed`);
-  assert.equal(s.calls[0].url, `https://api.sketchfab.com/v3/models/${UID}`);
-  assert.ok(!JSON.stringify(m).includes(TOKEN));
-});
-await check("metadata is fetched without the token and with redirects refused", async () => {
-  const s = setup();
-  await handleSketchfabPreview(post({ url: PAGE }), s.env, s.deps);
-  assert.equal(s.calls[0].init.headers.Authorization, undefined);
-  assert.equal(s.calls[0].init.redirect, "error");
-});
-await check("unknown model is 404; Sketchfab error is 502; odd metadata is normalised safely", async () => {
-  const s = setup({ meta: null });
-  assert.equal((await handleSketchfabPreview(post({ url: PAGE }), s.env, s.deps)).status, 404);
-  const e = setup({ fetchOverride: () => jsonRes({}, 500) });
-  assert.equal((await handleSketchfabPreview(post({ url: PAGE }), e.env, e.deps)).status, 502);
-  const n = normalizeMetadata({ user: { profileUrl: "javascript:alert(1)" }, license: { url: "http://x" }, thumbnails: { images: [{ url: "http://media.sketchfab.com/a.jpg" }] } }, UID);
-  assert.equal(n.authorUrl, null);
-  assert.equal(n.license.url, null);
-  assert.equal(n.thumbnail, null);
-  assert.equal(n.isDownloadable, false);
-});
-await check("without a server token, preview says download is not possible here", async () => {
-  const s = setup({ env: {} });
-  const m = await (await handleSketchfabPreview(post({ url: PAGE }), s.env, s.deps)).json();
-  assert.equal(m.isDownloadable, true);
-  assert.equal(m.canDownload, false);
+await check("a failed validation writes nothing", () => {
+  assert.deepEqual(modelWrite({ sketchfab: sketchfabFromEmbedCode('<iframe src="https://evil.com"></iframe>') }), {});
 });
 
-console.log("Downloadable model");
-await check("glTF zip is downloaded via the Download API, unpacked and stored in R2", async () => {
-  const archive = await zip([
-    ["scene.gltf", '{"asset":{"version":"2.0"}}'],
-    ["scene.bin", new Uint8Array([1, 2, 3])],
-    ["textures/body_baseColor.png", new Uint8Array([137, 80, 78, 71])],
-    ["license.txt", "CC-BY"],
-  ]);
-  const s = setup({ file: bytesRes(archive) });
-  const res = await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps);
-  assert.equal(res.status, 200, await res.clone().text());
-  const out = await res.json();
-  const prefix = `3d-models/sketchfab/${UID}/1790000000000`;
-  assert.equal(out.modelUrl, `/media/${prefix}/scene.gltf`);
-  assert.equal(out.modelPath, prefix);
-  assert.equal(out.modelSource.type, "sketchfab-download");
-  assert.equal(out.modelSource.author, "Jane Modeller");
-  assert.equal(out.modelSource.license, "CC Attribution");
-  assert.equal(out.modelSource.format, "gltf");
-  assert.deepEqual([...s.stored.keys()].sort(), [`${prefix}/scene.bin`, `${prefix}/scene.gltf`, `${prefix}/textures/body_baseColor.png`]);
-  assert.equal(s.stored.get(`${prefix}/scene.gltf`).type, "model/gltf+json");
-  assert.equal(s.stored.get(`${prefix}/textures/body_baseColor.png`).type, "image/png");
-  assert.deepEqual([...s.stored.get(`${prefix}/scene.bin`).body], [1, 2, 3]);
-  const dl = s.calls.find((c) => c.url.endsWith("/download"));
-  assert.equal(dl.init.headers.Authorization, `Token ${TOKEN}`);
-  assert.equal(s.calls.at(-1).url, S3);
-  assert.equal(s.calls.at(-1).init.redirect, "error");
-  assert.equal(s.calls.at(-1).init.headers, undefined, "token never sent to the file host");
-  assert.ok(!JSON.stringify(out).includes(TOKEN));
-});
-await check("a GLB is preferred when offered and stored as one file", async () => {
-  const s = setup({ links: { glb: { url: S3, size: 12 }, gltf: { url: S3, size: 99 } }, file: bytesRes(GLB) });
-  const out = await (await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps)).json();
-  assert.equal(out.modelSource.format, "glb");
-  assert.ok(out.modelUrl.endsWith("/model.glb"));
-  assert.equal(s.stored.size, 1);
-  assert.equal([...s.stored.values()][0].type, "model/gltf-binary");
-});
-await check("stored (uncompressed) zip entries work too", async () => {
-  const files = await unzipGltf(await zip([["model/scene.gltf", "{}"]], { deflate: false }));
-  assert.equal(sceneFile(files).path, "model/scene.gltf");
-});
-
-console.log("Not downloadable -> embed");
-await check("download of a non-downloadable model is 409 and the Download API is never called", async () => {
-  const s = setup({ meta: { ...META, isDownloadable: false } });
-  const res = await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps);
-  assert.equal(res.status, 409);
-  assert.ok(/embed/i.test((await res.json()).message));
-  assert.ok(!s.calls.some((c) => c.url.endsWith("/download")));
-  assert.equal(s.stored.size, 0);
-});
-await check("the browser cannot claim a model is downloadable: metadata is re-read", async () => {
-  const s = setup({ meta: { ...META, isDownloadable: false } });
-  const res = await handleSketchfabImport(post({ url: PAGE, mode: "download", isDownloadable: true }), s.env, s.deps);
-  assert.equal(res.status, 409);
-});
-await check("embed saves the official viewer URL and attribution, downloads nothing", async () => {
-  const s = setup({ meta: { ...META, isDownloadable: false } });
-  const out = await (await handleSketchfabImport(post({ url: PAGE, mode: "embed" }), s.env, s.deps)).json();
-  assert.equal(out.modelUrl, `https://sketchfab.com/models/${UID}/embed`);
-  assert.equal(out.modelPath, null);
-  assert.equal(out.modelSource.type, "sketchfab-embed");
-  assert.equal(out.modelSource.title, "Red Sports Car");
-  assert.equal(s.calls.length, 1);
-  assert.equal(s.stored.size, 0);
-});
-await check("Sketchfab refusing the download (403) and no token (503) both point to the embed", async () => {
-  const r403 = setup({ fetchOverride: (url) => (url.endsWith("/download") ? jsonRes({}, 403) : jsonRes(META)) });
-  const a = await handleSketchfabImport(post({ url: PAGE, mode: "download" }), r403.env, r403.deps);
-  assert.equal(a.status, 403);
-  const none = setup({ env: {} });
-  const b = await handleSketchfabImport(post({ url: PAGE, mode: "download" }), none.env, none.deps);
-  assert.equal(b.status, 503);
-  assert.ok(!none.calls.some((c) => c.url.endsWith("/download")));
-});
-
-console.log("SSRF protection");
-await check("only https Sketchfab/S3 download hosts are allowed", () => {
-  for (const ok of [S3, "https://media.sketchfab.com/x.glb", "https://sketchfab.com/a"]) assert.ok(isAllowedDownloadUrl(ok), ok);
-  for (const bad of [
-    "http://sketchfab-prod-media.s3.amazonaws.com/x.zip",
-    "https://evil.s3.amazonaws.com/x.zip",
-    "https://sketchfab.com.evil.com/x",
-    "https://evilsketchfab.com/x",
-    "https://169.254.169.254/latest",
-    "https://localhost/x",
-    "https://sketchfab-prod-media.s3.amazonaws.com:444/x",
-    "https://u:p@media.sketchfab.com/x",
-    "file:///etc/passwd",
-    "not a url",
-  ])
-    assert.equal(isAllowedDownloadUrl(bad), false, bad);
-});
-await check("a Download API link to another host is refused and never fetched", async () => {
-  const s = setup({ links: { gltf: { url: "http://169.254.169.254/latest/meta-data", size: 10 } } });
-  const res = await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps);
-  assert.equal(res.status, 502);
-  assert.ok(!s.calls.some((c) => c.url.includes("169.254")));
-});
-await check("a redirect from the file host fails the import", async () => {
-  const s = setup({
-    fetchOverride: (url, init) => {
-      if (url.endsWith("/download")) return jsonRes({ gltf: { url: S3, size: 10 } });
-      if (url === S3) {
-        assert.equal(init.redirect, "error");
-        throw new TypeError("redirect mode is set to error");
-      }
-      return jsonRes(META);
-    },
-  });
-  assert.equal((await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps)).status, 502);
-  assert.equal(s.stored.size, 0);
-});
-
-console.log("Size and type validation");
-await check("declared size over the limit is refused before downloading", async () => {
-  const s = setup({ links: { gltf: { url: S3, size: MAX_DOWNLOAD_BYTES + 1 } } });
-  assert.equal((await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps)).status, 413);
-  assert.ok(!s.calls.some((c) => c.url === S3));
-});
-await check("an oversized body is cut off even if the declared size lied", async () => {
-  const s = setup({ file: bytesRes(new Uint8Array(10), { "content-length": String(MAX_DOWNLOAD_BYTES + 5) }) });
-  assert.equal((await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps)).status, 413);
-  assert.equal(s.stored.size, 0);
-});
-await check("a GLB link that is not a GLB, or a zip that is not a zip, is refused", async () => {
-  const g = setup({ links: { glb: { url: S3, size: 4 } }, file: bytesRes(enc.encode("<html>")) });
-  assert.equal((await handleSketchfabImport(post({ url: PAGE, mode: "download" }), g.env, g.deps)).status, 422);
-  const z = setup({ file: bytesRes(enc.encode("not a zip at all, definitely")) });
-  assert.equal((await handleSketchfabImport(post({ url: PAGE, mode: "download" }), z.env, z.deps)).status, 422);
-  assert.equal(g.stored.size + z.stored.size, 0);
-});
-await check("a zip without a .gltf scene is refused; unsafe or unknown entries are skipped", async () => {
-  const s = setup({ file: bytesRes(await zip([["readme.txt", "hi"], ["scene.bin", "x"]])) });
-  assert.equal((await handleSketchfabImport(post({ url: PAGE, mode: "download" }), s.env, s.deps)).status, 422);
-  const files = await unzipGltf(await zip([["../../etc/passwd.png", "x"], ["/abs.gltf", "{}"], ["a\\b.png", "x"], ["run.js", "x"], ["ok/scene.gltf", "{}"]]));
-  assert.deepEqual(files.map((f) => f.path), ["ok/scene.gltf"]);
-  for (const bad of ["../x.png", "a/../b.png", "x.exe", "dir/", ""]) assert.equal(safeEntryPath(bad), null, bad);
-});
-await check("3D uploads with an empty browser type get their type from the extension", () => {
-  assert.equal(uploadType({ name: "car.glb", type: "" }, "3d-models"), "model/gltf-binary");
-  assert.equal(uploadType({ name: "car.GLTF", type: "application/octet-stream" }, "3d-models"), "model/gltf+json");
-  assert.equal(uploadType({ name: "x.exe", type: "" }, "3d-models"), "");
-  assert.equal(uploadType({ name: "car.glb", type: "" }, "car-images"), "", "only for the 3d-models folder");
-});
-
-console.log("Car document update, removal and replacement");
-await check("nothing chosen writes nothing", () => assert.deepEqual(modelWrite({}), {}));
-await check("Sketchfab import writes modelUrl, modelPath and modelSource", () => {
-  const sf = { modelUrl: "/media/3d-models/sketchfab/u/1/scene.gltf", modelPath: "3d-models/sketchfab/u/1", modelSource: { type: "sketchfab-download", uid: UID } };
-  assert.deepEqual(modelWrite({ sketchfab: sf }), sf);
-  assert.deepEqual(modelWrite({ sketchfab: { modelUrl: "https://sketchfab.com/models/x/embed", modelSource: { type: "sketchfab-embed" } } }).modelPath, null);
-});
-await check("an upload replaces a Sketchfab model and clears its attribution", () => {
-  assert.deepEqual(modelWrite({ uploaded: { url: "/media/3d-models/1_a.glb", path: "3d-models/1_a.glb" }, sketchfab: { modelUrl: "x" }, remove: true }), {
+console.log("Local models unchanged; removal and replacement");
+await check("upload writes modelUrl/modelPath as before and clears any Sketchfab source", () => {
+  assert.deepEqual(modelWrite({ uploaded: { url: "/media/3d-models/1_a.glb", path: "3d-models/1_a.glb" }, sketchfab: sketchfabFromUrl(PAGE) }), {
     modelUrl: "/media/3d-models/1_a.glb",
     modelPath: "3d-models/1_a.glb",
     modelSource: null,
   });
 });
-await check("remove clears all three fields", () => assert.deepEqual(modelWrite({ remove: true }), { modelUrl: null, modelPath: null, modelSource: null }));
-await check("car page: embed only for an exact Sketchfab embed URL; glTF otherwise; old cars still work", () => {
-  const embed = `https://sketchfab.com/models/${UID}/embed`;
-  const src = { type: "sketchfab-embed", title: "T", author: "A", authorUrl: "https://sketchfab.com/a", viewerUrl: `https://sketchfab.com/3d-models/${UID}`, license: "CC BY", licenseUrl: "https://creativecommons.org/licenses/by/4.0/" };
-  const v = modelView({ modelUrl: embed, modelSource: src });
-  assert.equal(v.kind, "embed");
-  assert.equal(v.credit.author, "A");
-  assert.equal(modelView({ modelUrl: "https://evil.com/x", modelSource: { type: "sketchfab-embed" } }), null);
-  assert.equal(modelView({ modelUrl: "https://sketchfab.com/models/../evil", modelSource: null }), null);
-  assert.deepEqual(modelView({ modelUrl: "/media/3d-models/1_a.glb" }), { kind: "gltf", url: "/media/3d-models/1_a.glb", credit: null });
+await check("remove clears all three fields; nothing chosen writes nothing", () => {
+  assert.deepEqual(modelWrite({ remove: true }), { modelUrl: null, modelPath: null, modelSource: null });
+  assert.deepEqual(modelWrite({}), {});
+});
+await check("car page: local model -> Three.js, Sketchfab -> embed with credit, none -> hidden", () => {
+  assert.deepEqual(modelView({ modelUrl: "/media/3d-models/1_a.glb", modelPath: "3d-models/1_a.glb" }), { kind: "gltf", url: "/media/3d-models/1_a.glb" });
+  const v = modelView({ modelUrl: EMBED, modelSource: { type: "sketchfab-embed", embedUrl: EMBED, sourceUrl: PAGE, attribution: "Red Sports Car by Jane" } });
+  assert.deepEqual(v, { kind: "embed", url: EMBED, sourceUrl: PAGE, attribution: "Red Sports Car by Jane" });
   assert.equal(modelView({}), null);
-  assert.equal(modelView({ modelUrl: "/m.glb", modelSource: { type: "sketchfab-download", authorUrl: "javascript:x" } }).credit.authorUrl, null);
+  assert.equal(modelView({ modelUrl: "" }), null);
 });
+await check("car page never iframes or loads anything that is not validated", () => {
+  for (const modelUrl of ["https://evil.com/x", "javascript:alert(1)", "data:text/html,x", "//evil.com/m.glb", `https://sketchfab.com/models/${UID}/embed?x=1`, "https://evil.com/car.glb"])
+    assert.equal(modelView({ modelUrl, modelSource: { type: "sketchfab-embed" } }), null, modelUrl);
+  assert.equal(modelView({ modelUrl: EMBED, modelSource: { type: "sketchfab-embed", sourceUrl: "javascript:alert(1)", attribution: "<b>x</b>" } }).sourceUrl, `https://sketchfab.com/3d-models/${UID}`);
+  assert.ok(!/[<>]/.test(modelView({ modelUrl: EMBED, modelSource: { type: "sketchfab-embed", attribution: "<b>x</b>" } }).attribution));
+});
+await check("3D uploads with an empty browser type still get their type from the extension", () => {
+  assert.equal(uploadType({ name: "car.glb", type: "" }, "3d-models"), "model/gltf-binary");
+  assert.equal(uploadType({ name: "car.gltf", type: "application/octet-stream" }, "3d-models"), "model/gltf+json");
+  assert.equal(uploadType({ name: "car.glb", type: "" }, "car-images"), "");
+});
+
+console.log("Wiring, admin-only writes, no API");
 const read = (p) => readFile(new URL(p, import.meta.url), "utf8");
-const [admin, details, worker, panel] = await Promise.all([read("../public/app/js/pages/admin.js"), read("../public/app/js/pages/car-details.js"), read("../server/worker.js"), read("../public/app/js/features/sketchfab-import.js")]);
-await check("admin form saves the model through modelWrite and offers both options", () => {
+const [admin, details, panel, worker, rules, store] = await Promise.all([
+  read("../public/app/js/pages/admin.js"),
+  read("../public/app/js/pages/car-details.js"),
+  read("../public/app/js/features/sketchfab-import.js"),
+  read("../server/worker.js"),
+  read("../server/rules/firestore.rules"),
+  read("../public/app/js/core/store.js"),
+]);
+await check("admin UI offers upload, embed code and URL, with Preview and Save", () => {
+  for (const bit of ["Upload 3D Model", "Paste Sketchfab Embed Code", "Paste Sketchfab &lt;iframe&gt; code here...", "Paste Sketchfab URL", "https://sketchfab.com/3d-models/...", '"sf-preview">Preview<', '"sf-save">Save<'])
+    assert.ok(panel.includes(bit), bit);
+});
+await check("save and remove go through the admin-only car write (Firestore rules)", () => {
+  assert.ok(/await saveCar\(modelWrite\(\{ sketchfab: r \}\), car\.id\)/.test(panel));
   assert.ok(/Object\.assign\(data, modelWrite\(\{ uploaded, sketchfab: modelSection\.pending\(\), remove: removeModel \}\)\);/.test(admin));
-  assert.ok(panel.includes("Upload 3D Model") && panel.includes("Import from Sketchfab") && panel.includes("Use Sketchfab Embed"));
-  assert.ok(/modelView\(car\)/.test(details));
+  assert.ok(/match \/cars\/\{id\}\s*\{ allow read: if true; allow write: if isAdmin\(\); \}/.test(rules));
 });
-await check("routes are admin-only through adminUser", () => {
-  assert.ok(/"\/api\/admin\/sketchfab\/preview"\) return handleSketchfabPreview\(request, env, sketchfabDeps\)/.test(worker));
-  assert.ok(/"\/api\/admin\/sketchfab\/import"\) return handleSketchfabImport\(request, env, sketchfabDeps\)/.test(worker));
-  assert.ok(/const sketchfabDeps = \{\s*admin: adminUser,/.test(worker));
+await check("pasted HTML is never inserted: preview and page build their own sandboxed iframe", () => {
+  assert.ok(!/innerHTML\s*=\s*[^;]*\$\("sf-code"\)\.value/.test(panel));
+  assert.ok(/embedFrame\(r\.embedUrl\)/.test(panel));
+  assert.ok(/sandbox="\$\{SANDBOX\}"/.test(panel));
+  assert.ok(/embedFrame\(model\.url\)/.test(details) && /modelView\(car\)/.test(details));
 });
-
-console.log("No secrets client-side");
-await check("no public file mentions the token, the Download API, or a Sketchfab secret", async () => {
-  const walk = async (dir) => (await readdir(dir, { withFileTypes: true })).flatMap((d) => (d.isDirectory() ? [] : [`${dir}/${d.name}`]));
-  const dirs = ["public/app/js/core", "public/app/js/features", "public/app/js/pages", "public/app/pages"];
-  let scanned = 0;
-  for (const dir of dirs)
-    for (const f of await walk(new URL(`../${dir}`, import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"))) {
-      const src = await readFile(f, "utf8");
-      assert.ok(!/SKETCHFAB_API_TOKEN|api\.sketchfab\.com|\/download["'`]|Token \$\{|client_secret/i.test(src), f);
-      scanned++;
+await check("no Sketchfab API, token, download or import route remains", async () => {
+  assert.ok(!existsSync(new URL("../server/sketchfab", import.meta.url)));
+  assert.ok(!/sketchfab/i.test(worker), "worker still mentions sketchfab");
+  assert.ok(!/sketchfab/i.test(store), "store still calls a sketchfab route");
+  const files = [];
+  const walk = async (dir) => {
+    for (const d of await readdir(dir, { withFileTypes: true })) {
+      if (["node_modules", ".git", ".wrangler", "backups"].includes(d.name)) continue;
+      const p = `${dir}/${d.name}`;
+      if (d.isDirectory()) await walk(p);
+      else if (/\.(m?js|html|toml|rules|json)$/.test(d.name)) files.push(p);
     }
-  assert.ok(scanned >= 30, `only ${scanned} public files scanned`);
+  };
+  const root = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1").replace(/\/$/, "");
+  await walk(`${root}/public`);
+  await walk(`${root}/server`);
+  files.push(`${root}/wrangler.toml`);
+  assert.ok(files.length >= 40, `only ${files.length} files scanned`);
+  for (const f of files) {
+    const src = await readFile(f, "utf8");
+    assert.ok(!/SKETCHFAB_API_TOKEN|api\.sketchfab\.com|\/api\/admin\/sketchfab/i.test(src), f);
+  }
+});
+await check("everything works with no Sketchfab token in the environment", () => {
+  assert.equal(process.env.SKETCHFAB_API_TOKEN, undefined);
+  assert.equal(sketchfabFromUrl(PAGE).ok, true);
+  assert.equal(modelWrite({ sketchfab: sketchfabFromEmbedCode(SNIPPET) }).modelUrl, EMBED);
 });
 
-console.log(`\n${passed} checks passed. (Fake network and R2; nothing real called.)`);
+console.log(`\n${passed} checks passed. (No network; no Sketchfab API.)`);

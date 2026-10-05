@@ -22,7 +22,5 @@ ADMIN_UIDS = "U95gwk62Ale4kPfCNSAlUQ7TQcq2"
 # Enquiry mail (Brevo). The API key itself is a secret:
 #   npx wrangler secret put BREVO_API_KEY
 # Brevo verifies one sender address by email, so no DNS records are needed.
-# Sketchfab model downloads (optional; without it only the embed is offered):
-#   npx wrangler secret put SKETCHFAB_API_TOKEN
 MAIL_FROM = "CarVerse <sales@carverse.de5.net>"
 SALES_EMAIL = "priieeet@gmail.com"

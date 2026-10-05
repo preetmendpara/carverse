@@ -51,7 +51,6 @@ server/                        BACKEND
   match/                       /api/match: AI Car Finder (rank.js = deterministic ranking)
   chat/                        /api/chat: assistant, routed through the Finder pipeline
   compare/                     /api/compare-ai: AI Compare (facts in code, Gemini explains)
-  sketchfab/                   /api/admin/sketchfab/*: Sketchfab import/embed (docs/SKETCHFAB.md)
   listing/                     /api/photo-listing: admin photo reading + validation
                                (see docs/AI-FEATURES.md)
   rules/

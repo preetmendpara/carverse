@@ -551,7 +551,7 @@ async function carForm(car = null, brandList = null) {
 
   const photoAi = mountPhotoListing({ brands: brandsAvailable });
 
-  const modelSection = mountModelSection();
+  const modelSection = mountModelSection({ car });
   let removeModel = false;
   document.getElementById("rm-model")?.addEventListener("click", (e) => {
     removeModel = true;
