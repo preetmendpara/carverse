@@ -4,8 +4,8 @@
 // file sends the message and shows the answer. It holds no catalogue, builds
 // no prompt, and never ranks anything.
 import { saveChat, visitorId } from "../core/store.js";
-import { esc, money } from "../components/layout.js";
 import { currentUser, goToLogin, idToken } from "../core/user-auth.js";
+import { chatCardData, carHref } from "../core/chat-cards.js";
 
 /** Sends one message. carId: the car whose page the chat was opened on, if any. */
 export async function askAssistant(message, { carId = null } = {}) {
@@ -57,18 +57,59 @@ export function mountChatbot({ seed = "", carId = null } = {}) {
   });
   if (seed) add("bot", seed);
 
-  // Recommendations: the matcher's own results and reasons, never AI-written text.
-  const resultsHtml = (data) => {
-    const items = (data.results || [])
-      .map(
-        (r) => `<li><a href="${base}pages/car-details.html?id=${encodeURIComponent(r.carId)}">${esc(r.title)}</a> — ${esc(money(r.price))}
-          <ul>${r.explanation.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></li>`
-      )
-      .join("");
-    const near = (data.nearMisses || [])
-      .map((n) => `<li><a href="${base}pages/car-details.html?id=${encodeURIComponent(n.carId)}">${esc(n.title)}</a> <span class="muted">✕ ${esc(n.failed[0])}</span></li>`)
-      .join("");
-    return `${items ? `<ol class="chat-results">${items}</ol>` : ""}${near ? `<p class="small muted" style="margin:8px 0 2px">Closest alternatives (not matches):</p><ul class="chat-results">${near}</ul>` : ""}`;
+  // Car cards: the Worker sends display fields (data.cards) for the car IDs in
+  // its answer — the matcher's own results, or the one car a question was
+  // about. All text goes in with textContent, never as HTML.
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  };
+  function carCard(card, note) {
+    const d = chatCardData(card);
+    if (!d) return null;
+    const a = el("a", "chat-card");
+    a.href = carHref(base, d.id);
+    const media = el("div", "chat-card-img");
+    if (d.image) {
+      const img = el("img");
+      img.src = d.image;
+      img.alt = d.title;
+      img.loading = "lazy";
+      img.addEventListener("error", () => media.replaceChildren(el("span", "", "No image")));
+      media.append(img);
+    } else media.append(el("span", "", "No image"));
+    const body = el("div", "chat-card-body");
+    body.append(el("div", "chat-card-title", d.title));
+    if (d.sub) body.append(el("div", "chat-card-meta", d.sub));
+    body.append(el("div", "chat-card-price", d.price));
+    if (d.specs) body.append(el("div", "chat-card-meta", d.specs));
+    if (note) body.append(el("div", "chat-card-note", note));
+    body.append(el("span", "chat-card-cta", "View Car →"));
+    a.append(media, body);
+    return a;
+  }
+  function addCards(target, items, cards = []) {
+    const list = el("div", "chat-cards");
+    for (const { carId, note, heading } of items) {
+      const card = carCard(cards.find((c) => c.carId === carId), note);
+      if (!card) continue;
+      if (heading) list.append(el("p", "small muted chat-cards-head", heading));
+      list.append(card);
+    }
+    if (!list.children.length) return;
+    target.append(list);
+    log.scrollTop = log.scrollHeight;
+  }
+  const cardItems = (data) => {
+    if (data.intent === "recommend")
+      return [
+        ...(data.results || []).map((r) => ({ carId: r.carId, note: r.explanation?.[0] || "" })),
+        ...(data.nearMisses || []).map((n, i) => ({ carId: n.carId, note: `Not a full match: ${n.failed?.[0] || ""}`, heading: i === 0 ? "Closest alternatives" : "" })),
+      ];
+    if (data.intent === "specific_car" && data.carId) return [{ carId: data.carId }];
+    return []; // general answers and off-topic replies get no cards
   };
 
   fab.addEventListener("click", () => panel.classList.toggle("open"));
@@ -85,7 +126,7 @@ export function mountChatbot({ seed = "", carId = null } = {}) {
     try {
       const data = await askAssistant(msg, { carId });
       pending.textContent = data.reply || "";
-      if (data.intent === "recommend") pending.insertAdjacentHTML("beforeend", resultsHtml(data));
+      addCards(pending, cardItems(data), data.cards);
       saveChat({ visitorId: visitorId(), question: msg, answer: data.reply || "", page: location.pathname }).catch(() => {});
     } catch (err) {
       pending.textContent = err.name === "TimeoutError" ? "That took too long. Please try again." : err.message;

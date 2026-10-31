@@ -11,7 +11,7 @@ import { json, fail, readJson, rateLimiter, safely } from "../lib/http.js";
 import { EXTRACTION_PROMPT, EXTRACTION_SCHEMA } from "../match/extract.js";
 import { matchResponse } from "../match/pipeline.js";
 import { buildMatchLog } from "../match/log.js";
-import { effectiveFields } from "../../public/app/js/core/car-fields.js";
+import { effectiveFields, fuelText, transmissionText } from "../../public/app/js/core/car-fields.js";
 
 export const MESSAGE_MAX = 500;
 const overLimit = rateLimiter(40);
@@ -34,6 +34,29 @@ const FIELD_LABEL = {
   powerHp: "power (hp)", groundClearanceMm: "ground clearance (mm)", bootLitres: "boot (litres)", seats: "seats",
   bodyType: "body type", airbags: "airbags", ncapStars: "NCAP stars", colour: "colour", owners: "owners",
 };
+/**
+ * Display fields for the chat's car cards, for exactly the car IDs in this
+ * answer (the matcher's results / near misses, or the one car asked about),
+ * from the catalogue the Worker already loaded. The browser never gets the
+ * catalogue and never reads car details out of AI text.
+ */
+export function chatCards(ids, cars) {
+  return ids
+    .map((id) => cars.find((c) => c.id === id))
+    .filter(Boolean)
+    .map((c) => ({
+      carId: c.id,
+      brandName: c.brandName || "",
+      model: c.model || "",
+      variant: c.variant || "",
+      year: c.year ?? null,
+      price: Number(c.price) || null,
+      fuel: fuelText(c),
+      transmission: transmissionText(c),
+      image: c.mainImage || (c.gallery || [])[0] || c.thumbnail || null,
+    }));
+}
+
 const title = (c) => [c.brandName, c.model, c.variant].filter(Boolean).join(" ");
 
 /** The ONLY car data a specific-car answer may see: one car, effective fields, nothing internal. */
@@ -138,7 +161,7 @@ export const handleChatRequest = safely(async (request, env, deps) => {
         user: `Car record (JSON):\n${JSON.stringify(carRecord(found.car))}\n\nBuyer's question: ${message}`,
         maxOutputTokens: 400,
       });
-      return json(200, { intent, carId: found.car.id, reply: out.data });
+      return json(200, { intent, carId: found.car.id, reply: out.data, cards: chatCards([found.car.id], cars) });
     } catch (err) {
       return fail(503, "ai_unavailable", err instanceof deps.GeminiError ? err.message : "The assistant is unavailable right now. Please try again.");
     }
@@ -148,5 +171,6 @@ export const handleChatRequest = safely(async (request, env, deps) => {
   const { status, body: out } = matchResponse({ raw, query: message, cars });
   if (status !== 200) return json(200, { intent: "clarify", reply: out.message, understood: out.understood || [] });
   await deps.writeLog(env, user.idToken, buildMatchLog({ uid: user.uid, query: message, requirements: out.requirements, results: out.results, model })).catch(() => false);
-  return json(200, { intent: "recommend", reply: recommendReply(out), ...out });
+  const ids = [...out.results, ...out.nearMisses].map((x) => x.carId);
+  return json(200, { intent: "recommend", reply: recommendReply(out), ...out, cards: chatCards(ids, cars) });
 });
