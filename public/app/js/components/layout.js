@@ -120,7 +120,7 @@ function mountAccountLink(base) {
       a = document.getElementById("account-link");
     }
     if (user) {
-      a.textContent = (user.name || user.email || "Account").split(" ")[0].split("@")[0].slice(0, 14);
+      a.textContent = "My Account";
       a.href = `${base}pages/account.html`;
     } else {
       a.textContent = "Sign in";
@@ -134,10 +134,13 @@ function mountAccountLink(base) {
     // The same account can be a buyer and an admin: an admin also gets a
     // direct link to the dashboard. The dashboard re-checks admin rights,
     // and the Worker and Firestore rules still enforce them server-side.
-    const old = document.getElementById("admin-link");
-    if (user && (await isAdmin(user.uid))) {
-      if (!old) nav.insertAdjacentHTML("beforeend", `<a id="admin-link" href="${base}admin/index.html">Admin</a>`);
-    } else old?.remove();
+    // The header can be painted twice (cached, then site settings), so two
+    // checks may run at once: look for the link only after the await.
+    const admin = user ? await isAdmin(user.uid) : false;
+    const links = document.getElementById("nav-links");
+    const old = links?.querySelectorAll("#admin-link") || [];
+    if (admin && links && !old.length) links.insertAdjacentHTML("beforeend", `<a id="admin-link" href="${base}admin/index.html">Admin</a>`);
+    if (!admin) old.forEach((x) => x.remove());
   });
 }
 
