@@ -7,6 +7,7 @@ import { mountChatbot } from "../features/chatbot.js";
 import { fallbackCarById } from "../data/fallback-cars.js";
 import { loadCatalog, availabilityOf, availabilityLabel } from "../core/catalog.js";
 import { modelView } from "../core/model-source.js";
+import { galleryCaption, nextExterior } from "../core/gallery.js";
 import { embedFrame } from "../features/sketchfab-import.js";
 
 (async function init() {
@@ -53,18 +54,7 @@ import { embedFrame } from "../features/sketchfab-import.js";
                  `${carTitle(car)} ${label.toLowerCase()} view ${i + 1}`
                )}">`
            )
-           .join("")}</div>${
-          label === "Exterior" && list.length > 1
-            ? `<div class="ext-grid" id="ext-grid" hidden>${list
-                .map(
-                  (src, i) =>
-                    `<figure><img src="${esc(src)}" loading="lazy" alt="${esc(
-                      `${carTitle(car)} exterior angle ${i + 1}`
-                    )}"><figcaption class="small">Angle ${i + 1} of ${list.length}</figcaption></figure>`
-                )
-                .join("")}</div>`
-            : ""
-        }</div>`
+           .join("")}</div></div>`
       : "";
 
   // Two kinds of row. "optional" rows are left out when empty, as before.
@@ -116,11 +106,12 @@ import { embedFrame } from "../features/sketchfab-import.js";
       <div>
         ${
           images.length
-            ? `<div class="gallery-main"><img id="main-img" src="${esc(images[0])}" alt="${esc(carTitle(car))}"></div>
-               <div id="thumbs">
+            ? `<div id="thumbs">
                  ${thumbGroup("Exterior", exteriorShots, 0)}
                  ${thumbGroup("Interior", interiorShots, exteriorShots.length)}
-               </div>`
+               </div>
+               <div class="gallery-main"><img id="main-img" src="${esc(images[0])}" alt="${esc(carTitle(car))}"></div>
+               <p class="small muted" id="main-caption" aria-live="polite">${esc(galleryCaption(exteriorShots.length, interiorShots.length, 0))}</p>`
             : `<div class="empty">No images available.</div>`
         }
         <div id="viewer-section" style="margin-top:24px; display:none">
@@ -154,21 +145,26 @@ import { embedFrame } from "../features/sketchfab-import.js";
       </aside>
     </div>`;
 
+  // One main image: each picture is shown once, as a thumbnail, and the
+  // selected one in the main viewer with its "Angle n of m" caption.
   const thumbs = document.getElementById("thumbs");
-  thumbs?.addEventListener("click", (e) => {
-    const t = e.target.closest("img");
+  let current = 0;
+  const select = (i) => {
+    const t = thumbs?.querySelector(`img[data-i="${i}"]`);
     if (!t) return;
-    document.getElementById("main-img").src = t.src;
-    thumbs.querySelectorAll("img").forEach((i) => i.classList.toggle("active", i === t));
+    current = i;
+    const main = document.getElementById("main-img");
+    main.src = t.src;
+    main.alt = t.alt;
+    document.getElementById("main-caption").textContent = galleryCaption(exteriorShots.length, interiorShots.length, i);
+    thumbs.querySelectorAll("img").forEach((x) => x.classList.toggle("active", x === t));
+  };
+  thumbs?.addEventListener("click", (e) => {
+    const t = e.target.closest("img[data-i]");
+    if (t) select(Number(t.dataset.i));
   });
-
-  const allExt = document.getElementById("all-ext");
-  allExt?.addEventListener("click", () => {
-    const grid = document.getElementById("ext-grid");
-    const open = grid.hasAttribute("hidden");
-    grid.toggleAttribute("hidden", !open);
-    allExt.textContent = open ? "Hide exterior angles" : "View all exterior angles";
-  });
+  // Steps the main viewer through the exterior angles (no second copy of them).
+  document.getElementById("all-ext")?.addEventListener("click", () => select(nextExterior(exteriorShots.length, current)));
 
   const wishBtn = document.getElementById("wish");
   const cmpBtn = document.getElementById("cmp");

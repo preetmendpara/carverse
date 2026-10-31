@@ -142,10 +142,8 @@ textarea { min-height: 110px; resize: vertical; }
 .thumb-group { margin-top: 14px; }
 .thumb-label { text-transform: uppercase; letter-spacing: .12em; opacity: .7; }
 .thumb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-.ext-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
-.ext-grid figure { margin: 0; }
-.ext-grid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid var(--border); border-radius: 10px; display: block; }
-.ext-grid figcaption { margin-top: 4px; opacity: .7; }
+#thumbs + .gallery-main { margin-top: 12px; }
+#main-caption { margin: 6px 0 0; }
 .spec-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .spec-table td { padding: 10px 0; border-bottom: 1px solid var(--border); }
 .spec-table td:first-child { color: var(--muted); width: 45%; }
