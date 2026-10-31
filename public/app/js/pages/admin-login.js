@@ -3,11 +3,18 @@ import { auth } from "../config/auth.js";
 import {
   signInWithEmailAndPassword,
   signOut,
+  onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { isAdmin } from "../core/store.js";
 
 (async function init() {
   await renderLayout({ base: "../", active: "Admin" });
+  // Already signed in on the site with an admin account: go straight to the
+  // dashboard instead of asking for the password again.
+  const stop = onAuthStateChanged(auth, async (user) => {
+    stop();
+    if (user && (await isAdmin(user.uid))) location.replace("../admin/index.html");
+  });
   const status = document.getElementById("status");
   document.getElementById("form").addEventListener("submit", async (e) => {
     e.preventDefault();

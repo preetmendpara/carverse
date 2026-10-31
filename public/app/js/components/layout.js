@@ -1,5 +1,5 @@
 // Reusable header/footer components + shared UI helpers.
-import { getSettings } from "../core/store.js";
+import { getSettings, isAdmin } from "../core/store.js";
 import { initAnimations } from "../features/animate.js";
 import { initMotionFx } from "../features/motion-fx.js";
 
@@ -129,7 +129,15 @@ function mountAccountLink(base) {
   };
   import("../core/user-auth.js").then(async (m) => {
     paint(m.cachedUser());
-    paint(await m.currentUser());
+    const user = await m.currentUser();
+    paint(user);
+    // The same account can be a buyer and an admin: an admin also gets a
+    // direct link to the dashboard. The dashboard re-checks admin rights,
+    // and the Worker and Firestore rules still enforce them server-side.
+    const old = document.getElementById("admin-link");
+    if (user && (await isAdmin(user.uid))) {
+      if (!old) nav.insertAdjacentHTML("beforeend", `<a id="admin-link" href="${base}admin/index.html">Admin</a>`);
+    } else old?.remove();
   });
 }
 
