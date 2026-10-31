@@ -58,6 +58,16 @@ function hardConstraints(req, car, e) {
     const ok = req.brands.some((b) => b.toLowerCase() === brand.toLowerCase());
     add("H9_brand", ok, `${brand || "Brand not listed"} — ${req.brands.join(" or ")} was required`, `${brand}, as required`);
   }
+  if (req.models?.length) {
+    const name = `${car.brandName || ""} ${car.model || ""}`.trim();
+    const ok = req.models.some((m) => m.toLowerCase() === name.toLowerCase());
+    add("H10_model", ok, `${name || "Model not listed"} — ${req.models.join(" or ")} was required`, `${name}, as required`);
+  }
+  if (req.variants?.length) {
+    const v = String(car.variant || "").trim();
+    const ok = req.variants.some((x) => x.toLowerCase() === v.toLowerCase());
+    add("H11_variant", ok, `${v ? `${v} variant` : "Variant not listed"} — ${req.variants.join(" or ")} was required`, `${v} variant, as required`);
+  }
   if (req.mustHaveFeatures?.length) {
     const feats = (car.features || []).map((f) => String(f).toLowerCase());
     const missing = req.mustHaveFeatures.filter((m) => !feats.some((f) => f.includes(String(m).toLowerCase())));
@@ -220,9 +230,15 @@ export function rank(req, cars) {
   }));
 
   // §6 Near misses: not sold, exactly one failed constraint, budget misses within 20%.
+  // A different brand/model/variant than the one named is never a near miss
+  // (it is not "almost" what was asked for). When a brand or model was named,
+  // that car's own budget miss is shown however far over, so the buyer sees
+  // why the car they asked for did not match.
+  const named = Boolean(req.brands?.length || req.models?.length);
+  const NAME_CHECKS = new Set(["H9_brand", "H10_model", "H11_variant"]);
   const near = evaluated
-    .filter((x) => x.failed.length === 1 && x.failed[0].name !== "H1_not_sold")
-    .filter((x) => x.failed[0].name !== "H2_budget_max" || (Number(x.car.price) || 0) <= req.budgetMaxInr * 1.2)
+    .filter((x) => x.failed.length === 1 && x.failed[0].name !== "H1_not_sold" && !NAME_CHECKS.has(x.failed[0].name))
+    .filter((x) => x.failed[0].name !== "H2_budget_max" || named || (Number(x.car.price) || 0) <= req.budgetMaxInr * 1.2)
     .sort((a, b) => {
       const ab = a.failed[0].name === "H2_budget_max", bb = b.failed[0].name === "H2_budget_max";
       if (ab !== bb) return ab ? -1 : 1;

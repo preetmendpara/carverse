@@ -46,7 +46,7 @@ intent:
 - "specific_car": a question about one particular car model, e.g. "tell me about the Maruti Swift", "does the Tata Nexon have a sunroof".
 - "general": a general car question not about choosing from stock, e.g. "how often should I service a car", "what is a CVT".
 - "off_topic": anything not about cars (coding, maths, news, jokes).
-carRef: for "specific_car", the car exactly as the buyer named it (e.g. "Maruti Swift"); otherwise null.
+carRef: the specific car model exactly as the buyer named it (e.g. "Maruti Swift"), for any intent, including a recommendation request such as "Swift under 8 lakh"; null when no specific model is named (never a brand alone, a body type or a kind of car).
 
 Requirements (fill only for "recommend"; otherwise leave them null or empty):
 - Budgets are Indian Rupees as plain numbers. 1 lakh = 100000. 1 crore = 10000000. Number words count ("twelve lakh" = 1200000).

@@ -43,3 +43,44 @@ export function nameSearch(cars, query) {
   const ids = new Set(cars.filter((c) => brands.includes(String(c.brandName || "").trim())).map((c) => c.id));
   return { nameOnly: false, ids: ids.size ? ids : null, label: brands.join(", ") };
 }
+
+// Model words that are also ordinary English. Inside a longer request they
+// count as a model only next to their brand ("Honda City"), never alone
+// ("city driving", "a venue", "defender of the family").
+const ORDINARY = new Set(["city", "venue", "elevate", "defender", "range", "competition", "sportback", "rover", "raptor", "mustang"]);
+const phraseIn = (padded, phrase) => {
+  const w = ` ${tokens(phrase).join(" ")} `;
+  return w.trim() && padded.includes(w);
+};
+
+/**
+ * Specific models (and variants) named inside a longer request, e.g.
+ * "Fortuner under 50 lakh", "BMW X1 automatic", "M4 under 80 lakh",
+ * "Range Rover diesel". Pure code against the catalogue, never AI.
+ * Returns { models: ["Toyota Fortuner", ...], variants: ["4X4", ...] }.
+ * A phrase counts when it is distinctive (two or more words, or contains a
+ * digit, or not an ordinary word) or when the car's brand is also named.
+ */
+export function modelMentions(cars, query) {
+  const q = padded(query);
+  const models = new Set();
+  const variants = new Set();
+  for (const c of cars) {
+    const brand = String(c.brandName || "").trim();
+    const model = String(c.model || "").trim();
+    if (!model) continue;
+    const words = model.split(/\s+/);
+    const phrases = [model, ...(words.length > 2 ? [words.slice(0, 2).join(" ")] : []), ...(words.length > 1 && words[0].length >= 2 ? [words[0]] : [])];
+    const brandNamed = brand && phraseIn(q, brand);
+    const hit = phrases.find((p) => {
+      if (p.length < 2 || !phraseIn(q, p)) return false; // one letter is never a model name ("a car")
+      const distinctive = p.includes(" ") || /\d/.test(p) || !ORDINARY.has(p.toLowerCase());
+      return distinctive || brandNamed;
+    });
+    if (!hit) continue;
+    models.add(`${brand} ${model}`.trim());
+    const variant = String(c.variant || "").trim();
+    if (variant && phraseIn(q, variant)) variants.add(variant);
+  }
+  return { models: [...models], variants: [...variants] };
+}

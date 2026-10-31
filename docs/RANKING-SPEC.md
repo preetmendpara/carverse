@@ -75,6 +75,8 @@ computed, and scoring only runs on cars that passed.
 | H7 | Body type | `bodyTypes.strength == "required"` | `bodyType` not in `values` |
 | H8 | Must-have features | `mustHaveFeatures` not empty | any feature not found in `features` (case-insensitive substring) |
 | H9 | Brand | `brands` not empty (brand names found in the buyer's own words by code, never by AI) | `brandName` not in `brands` |
+| H10 | Model | `models` not empty (catalogue models named anywhere in the buyer's words, found by code; or a model Gemini reports in `carRef` that CarVerse does not stock) | `brandName + model` not in `models` |
+| H11 | Variant | `variants` not empty (a car's variant named with its model) | `variant` not in `variants` |
 
 **Unknown is a fail, not a pass.** If the field a constraint needs is null on
 the car (seats not recorded, transmission unclear because of a data conflict),
@@ -188,7 +190,8 @@ Shown separately, under "Close, but not a match", never mixed with results.
 A car is a near miss when:
 - it is not sold (H1 always applies), and
 - it failed exactly **one** hard constraint, and
-- if that constraint is H2, the price is at most 20% over `budgetMaxInr`.
+- if that constraint is H2, the price is at most 20% over `budgetMaxInr` (no limit when a brand or model was named, so the named car's real price is shown);
+- the failed constraint is never H9/H10/H11: a different brand or model is not a near miss.
 
 At most 3, ordered by how close they are: budget misses by the amount over,
 everything else by price ascending. Each shows the single reason it failed, in

@@ -90,6 +90,10 @@ export function validateRequirements(raw) {
     // Catalogue brand names, found in the buyer's own words by code (never by
     // the AI): a hard requirement, e.g. "Toyota under 20 lakh".
     brands: strList(r.brands, 5, 40),
+    // Specific models / variants named in the buyer's words ("Toyota Fortuner",
+    // "4X4"), also found by code: hard requirements.
+    models: strList(r.models, 5, 60),
+    variants: strList(r.variants, 5, 40),
     inferred: [],
     unparsed: strList(r.unparsed, 5, 80),
   };
@@ -207,6 +211,8 @@ export function understoodChips(req) {
   for (const p of req.priorities || []) chips.push({ id: `priorities:${p}`, text: `Priority: ${LABEL.priorities[p]}` });
   for (const f of req.mustHaveFeatures || []) chips.push({ id: `mustHaveFeatures:${f}`, text: `Must have: ${f}` });
   for (const b of req.brands || []) chips.push({ id: `brands:${b}`, text: `Brand: ${b}` });
+  for (const m of req.models || []) chips.push({ id: `models:${m}`, text: `Model: ${m}` });
+  for (const v of req.variants || []) chips.push({ id: `variants:${v}`, text: `Variant: ${v}` });
   // Inferred chips are marked, so the buyer can tell what they said from what
   // was read into it, and remove the latter.
   const inferred = new Set(req.inferred || []);
@@ -226,4 +232,4 @@ export function removeChip(req, id) {
 /** True when the buyer stated nothing the ranking can use. */
 export const isEmpty = (req) =>
   req.budgetMaxInr == null && req.budgetMinInr == null && !req.transmission && !req.fuel && req.seatsMin == null && !req.bodyTypes &&
-  !(req.usage || []).length && !(req.priorities || []).length && !(req.mustHaveFeatures || []).length && !(req.brands || []).length;
+  !(req.usage || []).length && !(req.priorities || []).length && !(req.mustHaveFeatures || []).length && !(req.brands || []).length && !(req.models || []).length;

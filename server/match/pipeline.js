@@ -2,9 +2,12 @@
 // Used by BOTH the Car Finder (/api/match) and the chatbot's "recommend" path,
 // so the two can never rank differently. Pure: no network, no AI, no clock.
 import { rank } from "./rank.js";
-import { nameSearch } from "../../public/app/js/core/name-search.js";
+import { nameSearch, modelMentions } from "../../public/app/js/core/name-search.js";
 
 const CHEAPEST = /\b(cheapest|cheaper|lowest[- ]price[ds]?|least expensive|most affordable|maximum savings|budget[- ]friendly)\b/i;
+
+// Words that describe a kind of car, never a model name.
+const GENERIC = /^(any|a|the|some)?\s*(car|cars|suv|suvs|sedan|hatchback|muv|mpv|coupe|pickup|convertible|family car|city car|vehicle|automatic|manual|diesel|petrol|electric|ev|hybrid|cng)s?$/i;
 
 /**
  * Facts read from the buyer's own words by code, added to what Gemini
@@ -18,6 +21,16 @@ export function queryFacts(raw, query, cars) {
   const n = nameSearch(cars, query);
   const brands = n.ids ? [...new Set(cars.filter((c) => n.ids.has(c.id)).map((c) => String(c.brandName || "").trim()).filter(Boolean))] : [];
   if (brands.length) r.brands = [...new Set([...(Array.isArray(r.brands) ? r.brands : []), ...brands])];
+  // Specific models / variants named anywhere in the words ("Fortuner under 50
+  // lakh", "BMW X1 automatic"). A model the buyer named that CarVerse does not
+  // stock (Gemini's carRef, with no catalogue model found) is still required,
+  // so the answer is an honest no-match, never other models.
+  const m = modelMentions(cars, query);
+  const ref = typeof r.carRef === "string" ? r.carRef.trim() : "";
+  const refIsBrandOnly = ref && cars.some((c) => String(c.brandName || "").toLowerCase() === ref.toLowerCase());
+  if (m.models.length) r.models = m.models;
+  else if (ref && !refIsBrandOnly && !GENERIC.test(ref)) r.models = [ref.slice(0, 60)];
+  if (m.variants.length) r.variants = m.variants;
   if (CHEAPEST.test(query)) r.priorities = [...new Set([...(Array.isArray(r.priorities) ? r.priorities : []), "low_price"])];
   return r;
 }
