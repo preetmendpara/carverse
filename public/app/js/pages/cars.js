@@ -89,6 +89,7 @@ import {
     base: "../",
     cars,
     initialQuery: params.get("q") || "",
+    onLoading: (on) => el.grid.classList.toggle("is-stale", on),
     onNames: (ids) => {
       nameIds = ids;
       apply();

@@ -74,6 +74,7 @@ computed, and scoring only runs on cars that passed.
 | H6 | Seats | `seatsMin` set | `seats < seatsMin` |
 | H7 | Body type | `bodyTypes.strength == "required"` | `bodyType` not in `values` |
 | H8 | Must-have features | `mustHaveFeatures` not empty | any feature not found in `features` (case-insensitive substring) |
+| H9 | Brand | `brands` not empty (brand names found in the buyer's own words by code, never by AI) | `brandName` not in `brands` |
 
 **Unknown is a fail, not a pass.** If the field a constraint needs is null on
 the car (seats not recorded, transmission unclear because of a data conflict),
@@ -135,7 +136,7 @@ tie-breaks.
 
 | Criterion | Applies when | wᵢ | sᵢ | cᵢ |
 |---|---|---|---|---|
-| Budget fit | `budgetMaxInr` set | 20 | `1` for every car within budget (see note) | 1 |
+| Budget fit | `budgetMaxInr` set, no `low_price` priority | 20, or 0 (tie-break only) when other criteria exist | `price / budgetMaxInr` (see note) | 1 |
 | City use | `"city"` in usage | 15 | `city_suitability.score` | its confidence |
 | Highway use | `"highway"` in usage | 15 | `highway_suitability.score` | its confidence |
 | Rough roads | `"rough_roads"` in usage | 15 | `rough_road_suitability.score` | its confidence |
@@ -157,16 +158,23 @@ all passing cars have the same value. Cars with an unknown value get `cᵢ = 0`.
 car with an unrecorded boot size cannot outrank one with a measured large boot
 on family use. Every result lists its missing data openly.
 
-**Budget fit (amended in Phase 1).** The budget is a hard constraint (H2): a car
-over budget is never scored. Every car within budget scores `1`, whatever
-share of the budget it uses, so spending more of the budget is never a reason
-to rank higher. (The first version scored cars far below budget lower, which
-let an ₹80 lakh car outrank a ₹20 lakh car on "under ₹1 crore, good mileage".)
+**Budget fit (amended 2026-10, owner's requirement).** The budget is a hard
+constraint (H2): a car over budget is never a match. Within budget, the score is
+`price / budgetMaxInr`, so for a budget-only search the car closest to the
+ceiling ranks first (₹80 lakh budget: ₹78L, ₹72L, ₹55L, then ₹11L). When the
+search has other soft criteria (usage, priorities, preferences), Budget fit has
+weight 0: it stays in the breakdown but only breaks ties, so it never outranks
+the buyer's stated needs (e.g. "under ₹1 crore, good mileage" still ranks by
+mileage). An explicit "cheapest / lowest price / most affordable" request (the
+`low_price` priority, also detected in the buyer's words by code) replaces it:
+cheapest first. The explanation states price, budget, amount left and % used.
+(Earlier versions scored every in-budget car `1` with cheaper-first ties, which
+made unrelated searches with a budget return the same cheapest cars.)
 
 ## 5. Order and tie-breaking
 
 1. `score`, rounded to a whole number, descending
-2. `price`, ascending
+2. `price`: descending when a budget is set without `low_price`, otherwise ascending
 3. `year`, descending
 4. car `id`, ascending (so the order is fully deterministic)
 

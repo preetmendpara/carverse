@@ -24,7 +24,7 @@ function hardConstraints(req, car, e) {
     const over = price - req.budgetMaxInr;
     add("H2_budget_max", price > 0 && price <= req.budgetMaxInr,
       price > 0 ? `${money(price)} — ${money(over)} above your ${money(req.budgetMaxInr)} budget` : "Price not listed — a budget was set",
-      `${money(price)} — within your ${money(req.budgetMaxInr)} budget`);
+      budgetText(price, req.budgetMaxInr));
   }
   if (req.budgetMinInr != null)
     add("H3_budget_min", price >= req.budgetMinInr, `${money(price)} — below your ${money(req.budgetMinInr)} minimum`, `${money(price)} — at or above your ${money(req.budgetMinInr)} minimum`);
@@ -53,6 +53,11 @@ function hardConstraints(req, car, e) {
       known ? `${cap(BODY[e.bodyType])} — ${req.bodyTypes.values.map((b) => BODY[b]).join(" or ")} was required` : `Body type not recorded — ${req.bodyTypes.values.map((b) => BODY[b]).join(" or ")} was required`,
       `${cap(BODY[e.bodyType] || "")}, as required`);
   }
+  if (req.brands?.length) {
+    const brand = String(car.brandName || "").trim();
+    const ok = req.brands.some((b) => b.toLowerCase() === brand.toLowerCase());
+    add("H9_brand", ok, `${brand || "Brand not listed"} — ${req.brands.join(" or ")} was required`, `${brand}, as required`);
+  }
   if (req.mustHaveFeatures?.length) {
     const feats = (car.features || []).map((f) => String(f).toLowerCase());
     const missing = req.mustHaveFeatures.filter((m) => !feats.some((f) => f.includes(String(m).toLowerCase())));
@@ -61,6 +66,13 @@ function hardConstraints(req, car, e) {
   return out;
 }
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+/** "₹78 lakh of your ₹80 lakh budget — ₹2 lakh left (98% used)". */
+function budgetText(price, max) {
+  const used = Math.round((100 * price) / max);
+  const left = max - price;
+  return `${money(price)} of your ${money(max)} budget — ${left > 0 ? `${money(left)} left` : "exactly on budget"} (${used}% used)`;
+}
 
 /* §4 Soft score helpers. */
 const minMax = (values) => {
@@ -77,10 +89,16 @@ function softCriteria(req, passing) {
   const priceRank = minMax(passing.map((c) => Number(c.price) || 0));
 
   const list = [];
-  if (req.budgetMaxInr != null)
-    // Every car here already passed H2, so it is within budget: score 1. Using
-    // more of the budget is never a reason to rank higher (spec §4, amended).
-    list.push({ criterion: "Budget fit", weight: 20, of: (c) => ({ score: 1, confidence: 1, evidence: `${money(Number(c.price))} of ${money(req.budgetMaxInr)}` }) });
+  const cheapest = (req.priorities || []).includes("low_price");
+  if (req.budgetMaxInr != null && !cheapest)
+    // Every car here already passed H2 (price <= budget). The closer a car is to
+    // the budget ceiling, the better it uses what the buyer said they can spend:
+    // score = price / budget (spec §4, amended 2026-10). When the buyer asks for
+    // the cheapest car, "Low price" ranks instead and this is not added.
+    list.push({ criterion: "Budget fit", weight: 20, budget: true, of: (c) => {
+      const p = Number(c.price) || 0;
+      return { score: Math.min(1, p / req.budgetMaxInr), confidence: 1, evidence: budgetText(p, req.budgetMaxInr) };
+    } });
 
   const usage = { city: "city_suitability", highway: "highway_suitability", rough_roads: "rough_road_suitability", family: "family_practicality" };
   const usageLabel = { city: "City use", highway: "Highway use", rough_roads: "Rough roads", family: "Family use" };
@@ -135,6 +153,15 @@ function softCriteria(req, passing) {
       const b = effective(c).bodyType;
       return b === null ? { score: 0, confidence: 0, evidence: "Body type not listed" } : { score: req.bodyTypes.values.includes(b) ? 1 : 0, confidence: 1, evidence: BODY[b] };
     } });
+  // With other soft criteria, budget closeness only separates otherwise
+  // comparable cars: it never outweighs the buyer's stated needs. It stays in
+  // the breakdown (weight 0) and decides ties, closest to the ceiling first.
+  const budget = list.find((x) => x.budget);
+  if (budget && list.length > 1) {
+    budget.weight = 0;
+    const of = budget.of;
+    budget.of = (c) => ({ ...of(c), evidence: `${of(c).evidence}; used only to break ties` });
+  }
   return list;
 }
 
@@ -167,10 +194,13 @@ export function rank(req, cars) {
   });
 
   // §5 Order and tie-breaking, then at most 3.
+  // Ties: with a budget (and no "cheapest" request) the car closer to the
+  // budget ceiling first; otherwise the cheaper car first.
+  const pricierFirst = req.budgetMaxInr != null && !(req.priorities || []).includes("low_price");
   scored.sort(
     (a, b) =>
       b.score - a.score ||
-      (Number(a.car.price) || 0) - (Number(b.car.price) || 0) ||
+      (pricierFirst ? -1 : 1) * ((Number(a.car.price) || 0) - (Number(b.car.price) || 0)) ||
       (Number(b.car.year) || 0) - (Number(a.car.year) || 0) ||
       String(a.car.id).localeCompare(String(b.car.id))
   );
@@ -201,7 +231,10 @@ export function rank(req, cars) {
     .slice(0, 3)
     .map(({ car, failed }) => ({ carId: car.id, title: title(car), price: Number(car.price) || null, failed: [failed[0].reason] }));
 
-  return { results, nearMisses: near, meta: { candidatesBefore: cars.length, candidatesAfter: passing.length } };
+  // Every car that met all hard requirements, in rank order (the Cars grid
+  // shows exactly these; the top 3 above get full explanations).
+  const matchedIds = scored.map((x) => x.car.id);
+  return { results, nearMisses: near, matchedIds, meta: { candidatesBefore: cars.length, candidatesAfter: passing.length } };
 }
 
 /* §7 Explanations come only from templates over the actual ranking. */

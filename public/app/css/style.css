@@ -1013,3 +1013,5 @@ input, select, textarea { border-radius: 0; }
   #chat-panel { right: 10px; left: 10px; width: auto; max-width: none; bottom: 70px; height: min(560px, calc(100vh - 100px)); }
   .chat-card-img { flex-basis: 84px; height: 64px; }
 }
+/* Car Finder: the grid from the previous search, while a new one is loading. */
+#grid.is-stale { opacity: .35; pointer-events: none; transition: opacity .2s; }

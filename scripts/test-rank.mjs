@@ -113,11 +113,14 @@ check("ties break on price ascending, then year, then id", () => {
   const out = rank(req({}), [perfect({ id: "b", price: 900000 }), perfect({ id: "a", price: 900000 }), perfect({ id: "c", price: 800000 })]);
   assert.deepEqual(out.results.map((r) => r.carId), ["c", "a", "b"]);
 });
-check("budget fit: every in-budget car scores 1, however much of the budget it uses", () => {
+// Spec §4 amended 2026-10 (owner's requirement): budget fit = price / budget,
+// so the car closest to the budget ceiling ranks first; it used to be 1 for
+// every in-budget car with cheaper-first ties.
+check("budget fit: the in-budget car closest to the ceiling scores higher and ranks first", () => {
   const out = rank(req({ budgetMaxInr: 1200000 }), [perfect({ id: "near", price: 1100000 }), perfect({ id: "cheap", price: 300000 })]);
   const s = Object.fromEntries(out.results.map((r) => [r.carId, r.breakdown[0].score]));
-  assert.deepEqual(s, { near: 1, cheap: 1 });
-  assert.deepEqual(out.results.map((r) => r.carId), ["cheap", "near"], "equal scores -> cheaper first");
+  assert.deepEqual(s, { near: 0.917, cheap: 0.25 });
+  assert.deepEqual(out.results.map((r) => r.carId), ["near", "cheap"]);
 });
 check("REGRESSION: 'under 1 crore, good mileage' ranks by mileage, not by budget used", () => {
   const out = rank(req({ budgetMaxInr: 10000000, transmission: { value: "automatic", strength: "preferred" }, priorities: ["fuel_economy"] }), cars);
@@ -126,12 +129,12 @@ check("REGRESSION: 'under 1 crore, good mileage' ranks by mileage, not by budget
   for (let i = 1; i < out.results.length; i++) assert.ok(kmpl(out.results[i - 1].title) >= kmpl(out.results[i].title), "ordered by kmpl");
   assert.ok(!out.results.some((r) => r.title === "Volvo XC90"), "11 kmpl must not beat better-mileage cars");
 });
-check("a cheaper car is never ranked lower BECAUSE it is cheaper", () => {
+check("equal on the stated needs: budget closeness separates them (spec §4, amended 2026-10)", () => {
   const a = perfect({ id: "cheap", price: 2000000, fuelEconomyKmpl: 20 });
   const b = perfect({ id: "dear", price: 8000000, fuelEconomyKmpl: 20 });
   const out = rank(req({ budgetMaxInr: 10000000, priorities: ["fuel_economy"] }), [a, b]);
-  assert.equal(out.results[0].score, out.results[1].score);
-  assert.equal(out.results[0].carId, "cheap");
+  assert.equal(out.results[0].score, out.results[1].score, "budget never outweighs the stated needs");
+  assert.equal(out.results[0].carId, "dear", "tie -> closer to the budget ceiling first");
 });
 check("low price: a lone candidate scores 1, not 0 (amended §4)", () => {
   const out = rank(req({ priorities: ["low_price"] }), [perfect()]);
@@ -181,7 +184,7 @@ check("explanation lines come only from passed constraints and strong criteria",
   const out = rank(req({ budgetMaxInr: 1200000, transmission: { value: "automatic", strength: "required" }, usage: ["city"] }), cars);
   const venue = out.results[0];
   assert.ok(venue.explanation.includes("Automatic transmission, as required"));
-  assert.ok(venue.explanation.includes("₹8 lakh — within your ₹12 lakh budget"));
+  assert.ok(venue.explanation.some((l) => /^₹[\d.]+ lakh of your ₹12 lakh budget — ₹[\d.]+ lakh left \(\d+% used\)$/.test(l)), venue.explanation.join(" | "));
   assert.ok(venue.explanation.some((l) => l.startsWith("City use: High (estimate). Based on: Automatic transmission; Listed fuel economy of 17.9 kmpl")));
 });
 check("a weak criterion is never described as a strength", () => {

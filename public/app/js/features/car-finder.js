@@ -6,19 +6,20 @@
 // This is the Cars page's ONLY search input. Brand and model names are matched
 // in plain code first (catalog.js nameSearch): a name-only query ("BMW",
 // "Toyota Fortuner", "any model") just filters the grid, with no AI call and
-// no sign-in. Anything else goes to the AI Finder; names in it ("BMW under 50
-// lakh") limit the ranked results to those cars. Ranking itself is unchanged.
+// no sign-in. Anything else goes to the AI Finder; a brand in it ("BMW under 50
+// lakh") is applied by the server as a hard requirement.
 import { esc, money } from "../components/layout.js";
 import { idToken, requireUser } from "../core/user-auth.js";
 import { removeChip } from "../core/requirements.js";
 import { SUITABILITY_NOTE } from "../core/car-tags.js";
 import { nameSearch } from "../core/catalog.js";
+import { latestOnly } from "../core/latest.js";
 
 /**
  * cars: the catalogue on the page. onNames(ids|null): the grid shows only these
  * car ids (null = all cars).
  */
-export function mountFinder({ base = "../", cars = [], onNames = () => {}, initialQuery = "" } = {}) {
+export function mountFinder({ base = "../", cars = [], onNames = () => {}, onLoading = () => {}, initialQuery = "" } = {}) {
   const form = document.getElementById("finder-form");
   if (!form) return;
   const input = document.getElementById("finder-q");
@@ -26,13 +27,16 @@ export function mountFinder({ base = "../", cars = [], onNames = () => {}, initi
   const out = document.getElementById("finder-out");
   let current = null; // the last requirements the Worker returned
   let lastPayload = null; // for "Try again"
-  let names = null; // { ids, label } from a name in the AI query, or null
+  const requests = latestOnly(); // a newer search always wins
 
   async function run(payload) {
+    const ticket = requests.next();
     if (!(await requireUser(base))) return;
+    if (!requests.isLatest(ticket)) return;
     lastPayload = payload;
     go.disabled = true;
     out.setAttribute("aria-busy", "true");
+    onLoading(true); // the grid below still shows the previous search: mark it stale
     out.innerHTML = `<p class="small muted finder-loading">${payload.query ? "Reading your request and checking every car…" : "Updating the matches…"}</p>`;
     try {
       const res = await fetch("/api/match", {
@@ -42,15 +46,22 @@ export function mountFinder({ base = "../", cars = [], onNames = () => {}, initi
         signal: AbortSignal.timeout(30000),
       });
       const data = await res.json().catch(() => ({}));
+      if (!requests.isLatest(ticket)) return; // an older search answered late: ignore it
       if (data.requirements) current = data.requirements;
+      if (!res.ok) onNames(new Set()); // no valid search: no stale results either
       if (!res.ok) return renderMessage(data, res.status >= 500 || res.status === 429);
       render(data);
     } catch (err) {
+      if (!requests.isLatest(ticket)) return;
       // Never show guessed results after a failure: only the error and a retry.
+      onNames(new Set());
       renderMessage({ message: err.name === "TimeoutError" ? "That took too long." : "Couldn't reach the Car Finder. Check your connection." }, true);
     } finally {
-      go.disabled = false;
-      out.removeAttribute("aria-busy");
+      if (requests.isLatest(ticket)) {
+        go.disabled = false;
+        out.removeAttribute("aria-busy");
+        onLoading(false);
+      }
     }
   }
 
@@ -62,8 +73,11 @@ export function mountFinder({ base = "../", cars = [], onNames = () => {}, initi
   function search(query) {
     const n = nameSearch(cars, query);
     if (!query || n.nameOnly) {
-      // Names only (or "any model"): filter the grid in code, no AI.
-      names = null;
+      // Names only (or "any model"): filter the grid in code, no AI. This also
+      // cancels any AI search still in flight.
+      requests.next();
+      onLoading(false);
+      go.disabled = false;
       current = null;
       onNames(n.ids);
       out.innerHTML = n.ids
@@ -73,8 +87,8 @@ export function mountFinder({ base = "../", cars = [], onNames = () => {}, initi
           : "";
       return;
     }
-    names = n.ids ? { ids: n.ids, label: n.label } : null;
-    onNames(null);
+    // A brand named inside a request ("Toyota under 20 lakh") is applied by the
+    // server as a hard requirement, so nothing is filtered here.
     run({ query });
   }
   // A search handed over in the URL (?q=…), e.g. from the home page. Names run
@@ -90,9 +104,9 @@ export function mountFinder({ base = "../", cars = [], onNames = () => {}, initi
     if (chip && current) run({ requirements: removeChip(current, chip.dataset.remove) });
     if (e.target.closest("[data-retry]") && lastPayload) run(lastPayload);
     if (e.target.closest("[data-clear]")) {
+      requests.next();
       out.innerHTML = "";
       current = null;
-      names = null;
       onNames(null);
       input.value = "";
       input.focus();
@@ -120,17 +134,16 @@ export function mountFinder({ base = "../", cars = [], onNames = () => {}, initi
   }
 
   function render(data) {
-    // A brand or model named in the request limits the ranked list to it.
-    if (names) {
-      data = { ...data, results: data.results.filter((r) => names.ids.has(r.carId)), nearMisses: data.nearMisses.filter((n) => names.ids.has(n.carId)) };
-    }
-    const warnings = [...(data.validation?.warnings || []), ...(names ? [`Showing only ${names.label}.`] : [])];
+    // The grid below shows exactly the cars that met every requirement of THIS
+    // search, in rank order; none at all when nothing matched.
+    onNames(new Set(data.matchedIds || data.results.map((r) => r.carId)));
+    const warnings = data.validation?.warnings || [];
     out.innerHTML = `
       ${chipsHtml(data.understood)}
       ${warnings.map((w) => `<p class="small muted">${esc(w)}</p>`).join("")}
       <div class="finder-head">
-        <h3>${data.results.length ? `${data.results.length} matching car${data.results.length === 1 ? "" : "s"}` : "No car matches everything you asked for"}</h3>
-        <span class="small muted">${esc(`${data.meta.candidatesAfter} of ${data.meta.candidatesBefore} cars meet your requirements`)}</span>
+        <h3>${data.results.length ? `${data.meta.candidatesAfter} matching car${data.meta.candidatesAfter === 1 ? "" : "s"}` : "No car matches everything you asked for"}</h3>
+        <span class="small muted">${esc(data.results.length ? `Best ${data.results.length} explained here; all ${data.meta.candidatesAfter} listed below. ${data.meta.candidatesAfter} of ${data.meta.candidatesBefore} cars meet your requirements.` : `0 of ${data.meta.candidatesBefore} cars meet your requirements.`)}</span>
       </div>
       <div class="finder-results">${data.results.map(resultCard).join("")}</div>
       ${
